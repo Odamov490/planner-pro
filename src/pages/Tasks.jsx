@@ -1,104 +1,27 @@
-import { createContext, useState, useEffect } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  addDoc,
-  deleteDoc,
-  doc,
-  updateDoc,
-  onSnapshot,
-  query,
-  where
-} from "firebase/firestore";
+import {useState,useContext} from "react";
+import {TaskContext} from "../context/TaskContext";
+import TaskCard from "../components/TaskCard";
 
-export const TaskContext = createContext();
+export default function Tasks(){
+ const [title,setTitle]=useState("");
+ const {tasks,addTask,deleteTask,toggleTask}=useContext(TaskContext);
 
-export function TaskProvider({ children }) {
+ return (
+  <div>
+   <h1 className="text-2xl font-bold mb-4">Tasks</h1>
 
-  const [tasks, setTasks] = useState([]);
+   <div className="flex gap-2 mb-4">
+    <input className="border p-2 rounded w-full" value={title}
+     onChange={(e)=>setTitle(e.target.value)} placeholder="New task..."/>
+    <button className="bg-blue-500 text-white px-4 rounded"
+     onClick={()=>{addTask(title);setTitle("")}}>Add</button>
+   </div>
 
-  // 🔥 HAR USER UCHUN ALOHIDA ID
-  const getUserId = () => {
-    let id = localStorage.getItem("userId");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("userId", id);
-    }
-    return id;
-  };
-
-  const userId = getUserId();
-
-  // 📥 FAQAT O‘Z TASKLARINI OLISH
-  useEffect(() => {
-
-    const q = query(
-      collection(db, "tasks"),
-      where("userId", "==", userId)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setTasks(data);
-    });
-
-    return () => unsubscribe();
-
-  }, [userId]);
-
-  // ➕ ADD TASK
-  const addTask = async (title, date, priority, category) => {
-    try {
-      await addDoc(collection(db, "tasks"), {
-        title,
-        date,
-        priority,
-        category,
-        completed: false,
-        userId: userId, // 🔥 MUHIM
-        created: new Date()
-      });
-    } catch (err) {
-      console.error("Add error:", err);
-    }
-  };
-
-  // ❌ DELETE TASK
-  const deleteTask = async (id) => {
-    try {
-      await deleteDoc(doc(db, "tasks", id));
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
-  };
-
-  // 🔁 TOGGLE TASK
-  const toggleTask = async (id) => {
-    try {
-      const task = tasks.find(t => t.id === id);
-      if (!task) return;
-
-      await updateDoc(doc(db, "tasks", id), {
-        completed: !task.completed
-      });
-    } catch (err) {
-      console.error("Toggle error:", err);
-    }
-  };
-
-  return (
-    <TaskContext.Provider
-      value={{
-        tasks,
-        addTask,
-        deleteTask,
-        toggleTask
-      }}
-    >
-      {children}
-    </TaskContext.Provider>
-  );
+   <div className="space-y-3">
+    {tasks.map(t=>(
+     <TaskCard key={t.id} task={t} onToggle={toggleTask} onDelete={deleteTask}/>
+    ))}
+   </div>
+  </div>
+ )
 }
