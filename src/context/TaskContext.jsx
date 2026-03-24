@@ -15,12 +15,9 @@ export const TaskContext = createContext();
 
 export function TaskProvider({ children }) {
 
-  // 🔥 localStorage (saqlab qolamiz)
-  const [tasks, setTasks] = useState(
-    () => JSON.parse(localStorage.getItem("tasks")) || []
-  );
+  const [tasks, setTasks] = useState([]);
 
-  // 🔥 USER ID
+  // 🔥 USER ID (har user uchun alohida)
   const getUserId = () => {
     let id = localStorage.getItem("userId");
     if (!id) {
@@ -32,7 +29,7 @@ export function TaskProvider({ children }) {
 
   const userId = getUserId();
 
-  // 🔄 Firebase realtime (asosiy source)
+  // 🔥 REALTIME FETCH
   useEffect(() => {
 
     const q = query(
@@ -54,11 +51,11 @@ export function TaskProvider({ children }) {
 
   }, [userId]);
 
-  // ➕ ADD TASK (Firebase + local backup)
+  // ➕ ADD
   const addTask = async (title, date, priority, category) => {
     if (!title) return;
 
-    const newTask = {
+    await addDoc(collection(db, "tasks"), {
       title,
       date,
       priority,
@@ -66,41 +63,22 @@ export function TaskProvider({ children }) {
       completed: false,
       userId: userId,
       created: new Date()
-    };
-
-    // Firebase
-    await addDoc(collection(db, "tasks"), newTask);
-
-    // Local fallback (tez chiqishi uchun)
-    setTasks(prev => [...prev, { id: Date.now(), ...newTask }]);
+    });
   };
 
   // 🔁 TOGGLE
   const toggleTask = async (id) => {
-
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
-    try {
-      // Firebase update
-      await updateDoc(doc(db, "tasks", id), {
-        completed: !task.completed
-      });
-    } catch {
-      // fallback (agar local id bo‘lsa)
-      setTasks(tasks.map(t =>
-        t.id === id ? { ...t, completed: !t.completed } : t
-      ));
-    }
+    await updateDoc(doc(db, "tasks", id), {
+      completed: !task.completed
+    });
   };
 
   // ❌ DELETE
   const deleteTask = async (id) => {
-    try {
-      await deleteDoc(doc(db, "tasks", id));
-    } catch {
-      setTasks(tasks.filter(t => t.id !== id));
-    }
+    await deleteDoc(doc(db, "tasks", id));
   };
 
   return (
