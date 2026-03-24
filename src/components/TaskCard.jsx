@@ -5,11 +5,21 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
 
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(task.title);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newTitle.trim()) return;
-    onEdit(task.id, newTitle);
-    setIsEditing(false);
+
+    try {
+      setLoading(true);
+      await onEdit(task.id, newTitle); // 🔥 async kutadi
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Edit xato:", err);
+      alert("Saqlashda xatolik ❗");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +42,7 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             className="border p-1 rounded w-full"
+            autoFocus
           />
         ) : (
           <span className={`w-full ${task.completed ? "line-through text-gray-400" : ""}`}>
@@ -44,12 +55,25 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
       <div className="flex gap-2 ml-2">
 
         {isEditing ? (
-          <button
-            onClick={handleSave}
-            className="text-green-500 font-semibold"
-          >
-            Saqlash
-          </button>
+          <>
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="text-green-500 font-semibold"
+            >
+              {loading ? "..." : "Saqlash"}
+            </button>
+
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setNewTitle(task.title); // 🔥 eski holatga qaytaradi
+              }}
+              className="text-gray-400"
+            >
+              Bekor
+            </button>
+          </>
         ) : (
           <button
             onClick={() => setIsEditing(true)}
