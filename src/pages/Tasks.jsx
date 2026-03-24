@@ -13,10 +13,10 @@ export default function Tasks(){
  const [priority,setPriority]=useState("");
  const [category,setCategory]=useState("");
 
- // 🔥 BULK INPUT
  const [bulkText,setBulkText]=useState("");
 
- const {tasks,addTask,toggleTask,deleteTask}=useContext(TaskContext);
+ // 🔥 EDIT FUNCTION NI HAM OLDIK
+ const {tasks,addTask,toggleTask,deleteTask,editTask}=useContext(TaskContext);
 
  // ➕ SINGLE ADD
  const handleAdd=()=>{
@@ -44,7 +44,6 @@ export default function Tasks(){
     .map(l => l.trim())
     .filter(l => l !== "");
 
-  // 🔥 parallel qo‘shish (tez)
   await Promise.all(
     lines.map(line => addTask(line, date, priority, category))
   );
@@ -190,6 +189,7 @@ Sport qilish`}
        task={t} 
        onToggle={toggleTask} 
        onDelete={deleteTask}
+       onEdit={editTask} // 🔥 ENG MUHIM FIX
      />
     ))}
    </div>
