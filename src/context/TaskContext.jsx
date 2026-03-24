@@ -17,7 +17,6 @@ export function TaskProvider({ children }) {
 
   const [tasks, setTasks] = useState([]);
 
-  // 🔥 USER ID
   const getUserId = () => {
     let id = localStorage.getItem("userId");
     if (!id) {
@@ -29,7 +28,6 @@ export function TaskProvider({ children }) {
 
   const userId = getUserId();
 
-  // 🔥 REALTIME FETCH
   useEffect(() => {
 
     const q = query(
@@ -51,7 +49,7 @@ export function TaskProvider({ children }) {
 
   }, [userId]);
 
-  // ➕ ADD TASK
+  // ➕ ADD
   const addTask = async (title, date, priority, category) => {
     if (!title) return;
 
@@ -61,13 +59,13 @@ export function TaskProvider({ children }) {
       priority,
       category,
       completed: false,
-      userId: userId,
-      subtasks: [], // 🔥 NEW
+      userId,
+      subtasks: [],
       created: new Date()
     });
   };
 
-  // 🔁 TOGGLE TASK
+  // 🔁 TOGGLE
   const toggleTask = async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -77,7 +75,7 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ❌ DELETE TASK
+  // ❌ DELETE
   const deleteTask = async (id) => {
     await deleteDoc(doc(db, "tasks", id));
   };
@@ -100,11 +98,7 @@ export function TaskProvider({ children }) {
 
     const updated = [
       ...(task.subtasks || []),
-      {
-        id: Date.now(),
-        text,
-        completed: false
-      }
+      { id: Date.now(), text, completed: false }
     ];
 
     await updateDoc(doc(db, "tasks", taskId), {
@@ -138,6 +132,22 @@ export function TaskProvider({ children }) {
     });
   };
 
+  // ✏️ EDIT SUBTASK
+  const editSubtask = async (taskId, subId, newText) => {
+    if (!newText.trim()) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated = (task.subtasks || []).map(s =>
+      s.id === subId ? { ...s, text: newText } : s
+    );
+
+    await updateDoc(doc(db, "tasks", taskId), {
+      subtasks: updated
+    });
+  };
+
   return (
     <TaskContext.Provider value={{
       tasks,
@@ -147,7 +157,8 @@ export function TaskProvider({ children }) {
       editTask,
       addSubtask,
       toggleSubtask,
-      deleteSubtask
+      deleteSubtask,
+      editSubtask
     }}>
       {children}
     </TaskContext.Provider>

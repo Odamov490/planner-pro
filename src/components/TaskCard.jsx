@@ -4,22 +4,36 @@ import { TaskContext } from "../context/TaskContext";
 
 export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
 
-  const { addSubtask, toggleSubtask } = useContext(TaskContext);
+  const { addSubtask, toggleSubtask, deleteSubtask, editSubtask } = useContext(TaskContext);
 
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(task.title);
+
+  const [showSubInput, setShowSubInput] = useState(false);
   const [subText, setSubText] = useState("");
 
+  const [editingSubId, setEditingSubId] = useState(null);
+  const [editingSubText, setEditingSubText] = useState("");
+
+  // MAIN EDIT
   const handleSave = async () => {
     if (!newTitle.trim()) return;
     await onEdit(task.id, newTitle);
     setIsEditing(false);
   };
 
+  // ADD SUBTASK
   const handleAddSub = async () => {
     if (!subText.trim()) return;
     await addSubtask(task.id, subText);
     setSubText("");
+    setShowSubInput(false); // 🔥 yopiladi
+  };
+
+  // SAVE SUB EDIT
+  const handleSaveSub = async (subId) => {
+    await editSubtask(task.id, subId, editingSubText);
+    setEditingSubId(null);
   };
 
   return (
@@ -48,7 +62,16 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+
+          {/* ➕ SUBTASK BUTTON */}
+          <button
+            onClick={() => setShowSubInput(!showSubInput)}
+            className="text-green-600 font-bold text-lg"
+          >
+            +
+          </button>
+
           {isEditing ? (
             <button onClick={handleSave} className="text-green-500">
               Saqlash
@@ -62,11 +85,12 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
           <button onClick={() => onDelete(task.id)} className="text-red-500">
             O‘chirish
           </button>
+
         </div>
 
       </div>
 
-      {/* 🔥 SUBTASKS */}
+      {/* 🔥 SUBTASK LIST */}
       <div className="pl-6 space-y-2">
 
         {(task.subtasks || []).map(sub => (
@@ -78,28 +102,68 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
               onChange={() => toggleSubtask(task.id, sub.id)}
             />
 
-            <span className={sub.completed ? "line-through text-gray-400" : ""}>
-              {sub.text}
-            </span>
+            {editingSubId === sub.id ? (
+              <input
+                value={editingSubText}
+                onChange={(e) => setEditingSubText(e.target.value)}
+                className="border p-1 rounded w-full"
+              />
+            ) : (
+              <span className={`w-full ${sub.completed ? "line-through text-gray-400" : ""}`}>
+                {sub.text}
+              </span>
+            )}
+
+            <div className="flex gap-2">
+
+              {editingSubId === sub.id ? (
+                <button
+                  onClick={() => handleSaveSub(sub.id)}
+                  className="text-green-500"
+                >
+                  ✔
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditingSubId(sub.id);
+                    setEditingSubText(sub.text);
+                  }}
+                  className="text-blue-500"
+                >
+                  ✏️
+                </button>
+              )}
+
+              <button
+                onClick={() => deleteSubtask(task.id, sub.id)}
+                className="text-red-500"
+              >
+                ❌
+              </button>
+
+            </div>
 
           </div>
         ))}
 
-        {/* ➕ ADD SUBTASK */}
-        <div className="flex gap-2">
-          <input
-            value={subText}
-            onChange={(e) => setSubText(e.target.value)}
-            placeholder="Sub vazifa..."
-            className="border p-1 rounded w-full text-sm"
-          />
-          <button
-            onClick={handleAddSub}
-            className="text-green-500 text-sm"
-          >
-            +
-          </button>
-        </div>
+        {/* ➕ INPUT (faqat tugma bosilganda chiqadi) */}
+        {showSubInput && (
+          <div className="flex gap-2">
+            <input
+              value={subText}
+              onChange={(e) => setSubText(e.target.value)}
+              placeholder="Sub vazifa..."
+              className="border p-1 rounded w-full text-sm"
+            />
+            <button
+              onClick={handleAddSub}
+              className="text-green-500"
+            >
+              ✔
+            </button>
+          </div>
+        )}
 
       </div>
 
