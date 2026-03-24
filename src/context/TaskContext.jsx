@@ -1,47 +1,21 @@
 import {createContext,useState,useEffect} from "react";
-import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
 
 export const TaskContext=createContext();
 
 export function TaskProvider({children}){
- const [tasks,setTasks]=useState([]);
+ const [tasks,setTasks]=useState(()=>JSON.parse(localStorage.getItem("tasks"))||[]);
 
- useEffect(()=>{
-  const unsub = onSnapshot(collection(db,"tasks"),(snapshot)=>{
-    setTasks(snapshot.docs.map(doc=>({
-      id:doc.id,
-      ...doc.data()
-    })))
-  })
-  return ()=>unsub()
- },[])
+ useEffect(()=>{localStorage.setItem("tasks",JSON.stringify(tasks))},[tasks]);
 
- const addTask = async (title,date,priority,category)=>{
-  await addDoc(collection(db,"tasks"),{
-    title,
-    date,
-    priority,
-    category,
-    completed:false,
-    created:new Date()
-  })
- }
+ const addTask=(title,date)=>{
+  if(!title) return;
+  setTasks([...tasks,{id:Date.now(),title,date,completed:false}]);
+ };
 
- const deleteTask = async (id)=>{
-  await deleteDoc(doc(db,"tasks",id))
- }
+ const toggleTask=(id)=>setTasks(tasks.map(t=>t.id===id?{...t,completed:!t.completed}:t));
+ const deleteTask=(id)=>setTasks(tasks.filter(t=>t.id!==id));
 
- const toggleTask = async (id)=>{
-  const task = tasks.find(t=>t.id===id)
-  await updateDoc(doc(db,"tasks",id),{
-    completed: !task.completed
-  })
- }
-
- return (
-  <TaskContext.Provider value={{tasks,addTask,deleteTask,toggleTask}}>
-    {children}
-  </TaskContext.Provider>
- )
+ return <TaskContext.Provider value={{tasks,addTask,toggleTask,deleteTask}}>
+  {children}
+ </TaskContext.Provider>
 }
