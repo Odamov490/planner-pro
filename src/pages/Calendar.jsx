@@ -1,110 +1,103 @@
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { TaskContext } from "../context/TaskContext";
 
 export default function Calendar(){
 
  const {tasks} = useContext(TaskContext);
 
- const [currentDate, setCurrentDate] = useState(new Date());
+ // 📅 BUGUN
+ const today = new Date().toISOString().split("T")[0];
 
- // 📅 Helper functions
- const getDaysInMonth = (date) => {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  return new Date(year, month + 1, 0).getDate();
- };
+ // 📊 GROUP BY DATE
+ const grouped = {};
 
- const getFirstDay = (date) => {
-  return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
- };
+ tasks.forEach(t => {
+  if (!t.date) return;
 
- const daysInMonth = getDaysInMonth(currentDate);
- const firstDay = getFirstDay(currentDate);
+  if (!grouped[t.date]) grouped[t.date] = [];
+  grouped[t.date].push(t);
+ });
 
- const monthNames = [
-  "Yanvar","Fevral","Mart","Aprel","May","Iyun",
-  "Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"
- ];
-
- // 🔄 NAVIGATION
- const prevMonth = () => {
-  setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()-1));
- };
-
- const nextMonth = () => {
-  setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()+1));
- };
-
- // 📊 TASKS BY DATE
- const getTasksByDate = (day) => {
-  const d = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-  return tasks.filter(t => t.date === d);
- };
+ // 📅 SORT DATES
+ const sortedDates = Object.keys(grouped).sort();
 
  return (
   <div className="max-w-5xl mx-auto space-y-6">
 
    {/* HEADER */}
-   <div className="flex justify-between items-center">
-     <h1 className="text-3xl font-bold text-blue-600">📅 Kalendar</h1>
+   <div>
+     <h1 className="text-3xl font-extrabold text-blue-600">
+       📅 Kalendar
+     </h1>
+     <p className="text-gray-500">Sana bo‘yicha vazifalar</p>
+   </div>
 
-     <div className="flex gap-2">
-       <button onClick={prevMonth} className="px-3 py-1 bg-gray-200 rounded">⬅</button>
-       <button onClick={nextMonth} className="px-3 py-1 bg-gray-200 rounded">➡</button>
+   {/* EMPTY */}
+   {sortedDates.length === 0 && (
+     <div className="text-gray-400 text-center mt-10">
+       Vazifalar mavjud emas
      </div>
-   </div>
+   )}
 
-   {/* MONTH */}
-   <h2 className="text-xl font-semibold text-center">
-     {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-   </h2>
+   {/* DATE BLOCKS */}
+   <div className="space-y-6">
 
-   {/* WEEK DAYS */}
-   <div className="grid grid-cols-7 text-center font-medium text-gray-500">
-     <div>Yak</div>
-     <div>Dush</div>
-     <div>Sesh</div>
-     <div>Chor</div>
-     <div>Pays</div>
-     <div>Jum</div>
-     <div>Shan</div>
-   </div>
+     {sortedDates.map(date => {
 
-   {/* CALENDAR GRID */}
-   <div className="grid grid-cols-7 gap-2">
-
-     {/* EMPTY CELLS */}
-     {[...Array(firstDay)].map((_,i)=>(
-       <div key={i}></div>
-     ))}
-
-     {/* DAYS */}
-     {[...Array(daysInMonth)].map((_,i)=>{
-       const day = i+1;
-       const dayTasks = getTasksByDate(day);
+       const isToday = date === today;
 
        return (
-         <div key={day} className="bg-white p-2 rounded-xl shadow min-h-[100px] hover:shadow-md transition">
+         <div key={date} className="bg-white rounded-2xl shadow p-4">
 
-           <div className="font-bold text-sm mb-1">{day}</div>
+           {/* DATE HEADER */}
+           <div className="flex justify-between items-center mb-3">
+
+             <h2 className={`font-bold text-lg ${isToday ? "text-blue-600" : ""}`}>
+               {date}
+               {isToday && " (Bugun)"}
+             </h2>
+
+             <span className="text-sm text-gray-400">
+               {grouped[date].length} ta vazifa
+             </span>
+
+           </div>
 
            {/* TASKS */}
-           <div className="space-y-1">
-             {dayTasks.slice(0,3).map(t=>(
-               <div key={t.id} className="text-xs bg-blue-100 px-1 rounded truncate">
-                 {t.title}
+           <div className="space-y-2">
+
+             {grouped[date].map(task => (
+
+               <div
+                 key={task.id}
+                 className={`p-3 rounded-xl border flex justify-between items-center
+                 ${task.completed ? "bg-gray-100 line-through text-gray-400" : "bg-blue-50"}`}
+               >
+
+                 <div>
+                   <p className="font-medium">{task.title}</p>
+
+                   <div className="text-xs text-gray-500 flex gap-2 mt-1">
+                     {task.priority && <span>⚡ {task.priority}</span>}
+                     {task.category && <span>📂 {task.category}</span>}
+                   </div>
+                 </div>
+
+                 <div className={`text-sm font-semibold ${
+                   task.completed ? "text-green-500" : "text-red-400"
+                 }`}>
+                   {task.completed ? "✔" : "⏳"}
+                 </div>
+
                </div>
+
              ))}
 
-             {dayTasks.length > 3 && (
-               <div className="text-xs text-gray-400">
-                 +{dayTasks.length - 3} yana
-               </div>
-             )}
            </div>
 
          </div>
        );
+
      })}
 
    </div>
