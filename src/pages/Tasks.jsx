@@ -1,192 +1,86 @@
-import { useState, useContext } from "react";
-import { TaskContext } from "../context/TaskContext";
-import TaskCard from "../components/TaskCard";
-import { notify } from "../utils/notify";
+import { createContext, useState, useEffect } from "react";
+import { db } from "../firebase";
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  updateDoc,
+  onSnapshot,
+  query,
+  where
+} from "firebase/firestore";
 
-export default function Tasks() {
+export const TaskContext = createContext();
 
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
+export function TaskProvider({ children }) {
 
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [priority, setPriority] = useState("");
-  const [category, setCategory] = useState("");
+  const [tasks, setTasks] = useState([]);
 
-  // 🔥 BULK INPUT
-  const [bulkText, setBulkText] = useState("");
-
-  const { tasks, addTask, toggleTask, deleteTask } = useContext(TaskContext);
-
-  // ➕ SINGLE ADD
-  const handleAdd = () => {
-    if (!title) return notify("Vazifa nomini kiriting ❗");
-    if (!category) return notify("Kategoriya tanlang ❗");
-    if (!priority) return notify("Muhimlik darajasini tanlang ❗");
-
-    addTask(title, date, priority, category);
-    notify("Yangi vazifa qo‘shildi ✅");
-
-    setTitle("");
-    setDate("");
-    setPriority("");
-    setCategory("");
-  };
-
-  // 🚀 BULK ADD (FIXED)
-  const handleBulkAdd = async () => {
-    if (!bulkText) return notify("Tasklarni kiriting ❗");
-    if (!category) return notify("Kategoriya tanlang ❗");
-    if (!priority) return notify("Muhimlik tanlang ❗");
-
-    const lines = bulkText
-      .split(/\r?\n/) // Windows fix
-      .map((l) => l.trim())
-      .filter((l) => l !== "");
-
-    for (const line of lines) {
-      await addTask(line, date, priority, category);
+  // 🔥 USER ID (HAR USER UCHUN ALOHIDA)
+  const getUserId = () => {
+    let id = localStorage.getItem("userId");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("userId", id);
     }
-
-    notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
-    setBulkText("");
+    return id;
   };
 
-  // 🔍 FILTER
-  const filteredTasks = tasks
-    .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-    .filter((t) => {
-      if (filter === "done") return t.completed;
-      if (filter === "active") return !t.completed;
-      return true;
-    })
-    .filter((t) => {
-      if (category) return t.category === category;
-      return true;
+  const userId = getUserId();
+
+  // 📥 FAqat o‘z tasklarini olish
+  useEffect(() => {
+    const q = query(
+      collection(db, "tasks"),
+      where("userId", "==", userId)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      setTasks(snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
     });
 
-  // 📊 PROGRESS
-  const done = tasks.filter((t) => t.completed).length;
-  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
+    return () => unsub();
+  }, []);
+
+  // ➕ ADD TASK
+  const addTask = async (title, date, priority, category) => {
+    await addDoc(collection(db, "tasks"), {
+      title,
+      date,
+      priority,
+      category,
+      completed: false,
+      userId: userId, // 🔥 MUHIM
+      created: new Date()
+    });
+  };
+
+  // ❌ DELETE
+  const deleteTask = async (id) => {
+    await deleteDoc(doc(db, "tasks", id));
+  };
+
+  // 🔁 TOGGLE
+  const toggleTask = async (id) => {
+    const task = tasks.find(t => t.id === id);
+
+    await updateDoc(doc(db, "tasks", id), {
+      completed: !task.completed
+    });
+  };
 
   return (
-    <div className="max-w-4xl mx-auto">
-
-      <h1 className="text-3xl font-bold mb-6 text-blue-600">
-        Vazifalar
-      </h1>
-
-      {/* 🔍 SEARCH */}
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="🔍 Qidirish..."
-        className="w-full p-3 border rounded-xl mb-4"
-      />
-
-      {/* 📊 PROGRESS */}
-      <div className="mb-6">
-        <div className="w-full bg-gray-200 h-3 rounded-full">
-          <div
-            className="bg-blue-500 h-3 rounded-full transition-all"
-            style={{ width: percent + "%" }}
-          ></div>
-        </div>
-        <p className="text-sm mt-1">
-          {done} / {tasks.length} bajarildi
-        </p>
-      </div>
-
-      {/* 🎯 FILTER */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <select onChange={(e) => setFilter(e.target.value)} className="p-2 border rounded">
-          <option value="all">Hammasi</option>
-          <option value="done">Bajarilgan</option>
-          <option value="active">Bajarilmagan</option>
-        </select>
-
-        <select onChange={(e) => setCategory(e.target.value)} className="p-2 border rounded">
-          <option value="">Kategoriya (filter)</option>
-          <option>Ish</option>
-          <option>O‘qish</option>
-          <option>Shaxsiy</option>
-        </select>
-      </div>
-
-      {/* ➕ SINGLE ADD */}
-      <div className="bg-white p-4 rounded-xl shadow mb-6">
-        <input
-          className="w-full p-2 border mb-2"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Vazifa..."
-        />
-
-        <div className="flex gap-2 flex-wrap">
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="p-2 border"
-          />
-
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="p-2 border">
-            <option value="">Muhimlik *</option>
-            <option value="high">🔴 Yuqori</option>
-            <option value="medium">🟡 O‘rta</option>
-            <option value="low">🟢 Past</option>
-          </select>
-
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="p-2 border">
-            <option value="">Kategoriya *</option>
-            <option>Ish</option>
-            <option>O‘qish</option>
-            <option>Shaxsiy</option>
-          </select>
-        </div>
-
-        <button
-          onClick={handleAdd}
-          className="mt-3 bg-blue-500 text-white px-4 py-2 rounded hover:scale-105 transition"
-        >
-          ➕ Qo‘shish
-        </button>
-      </div>
-
-      {/* 🔥 BULK ADD */}
-      <div className="bg-white p-4 rounded-xl shadow mb-6">
-        <h2 className="font-semibold mb-2">🔥 Bir nechta vazifa qo‘shish</h2>
-
-        <textarea
-          value={bulkText}
-          onChange={(e) => setBulkText(e.target.value)}
-          placeholder={`Masalan:
-Task 1
-Task 2
-Task 3`}
-          className="w-full p-2 border rounded mb-3 h-32"
-        />
-
-        <button
-          onClick={handleBulkAdd}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:scale-105 transition"
-        >
-          🚀 Hammasini qo‘shish
-        </button>
-      </div>
-
-      {/* 📋 TASK LIST */}
-      <div className="space-y-3">
-        {filteredTasks.map((t) => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            onToggle={toggleTask}
-            onDelete={deleteTask}
-          />
-        ))}
-      </div>
-
-    </div>
+    <TaskContext.Provider value={{
+      tasks,
+      addTask,
+      deleteTask,
+      toggleTask
+    }}>
+      {children}
+    </TaskContext.Provider>
   );
 }
