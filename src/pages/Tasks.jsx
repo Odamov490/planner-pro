@@ -15,7 +15,15 @@ export default function Tasks(){
 
  const [bulkText,setBulkText]=useState("");
 
- const {tasks,addTask,toggleTask,deleteTask,editTask}=useContext(TaskContext);
+ const {
+   tasks,
+   addTask,
+   toggleTask,
+   deleteTask,
+   editTask,
+   addSubtask,       // 🔥 NEW
+   toggleSubtask     // 🔥 NEW
+ } = useContext(TaskContext);
 
  // ➕ SINGLE ADD
  const handleAdd=()=>{
@@ -194,7 +202,6 @@ export default function Tasks(){
     {sortedDates.map(date=>(
       <div key={date} className="bg-white p-4 rounded-2xl shadow">
 
-        {/* DATE */}
         <div className="flex justify-between mb-3 border-b pb-2">
           <h2 className={`font-bold ${date===today ? "text-red-500" : "text-blue-600"}`}>
             📅 {date} {date===today && "(Bugun)"}
@@ -204,7 +211,6 @@ export default function Tasks(){
           </span>
         </div>
 
-        {/* TASKS */}
         <div className="space-y-3">
           {groupedTasks[date].map(t=>(
             <TaskCard 

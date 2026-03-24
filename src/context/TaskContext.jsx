@@ -51,7 +51,7 @@ export function TaskProvider({ children }) {
 
   }, [userId]);
 
-  // ➕ ADD
+  // ➕ ADD TASK
   const addTask = async (title, date, priority, category) => {
     if (!title) return;
 
@@ -62,11 +62,12 @@ export function TaskProvider({ children }) {
       category,
       completed: false,
       userId: userId,
+      subtasks: [], // 🔥 NEW
       created: new Date()
     });
   };
 
-  // 🔁 TOGGLE
+  // 🔁 TOGGLE TASK
   const toggleTask = async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -76,17 +77,64 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ❌ DELETE
+  // ❌ DELETE TASK
   const deleteTask = async (id) => {
     await deleteDoc(doc(db, "tasks", id));
   };
 
-  // ✏️ EDIT (🔥 YANGI)
+  // ✏️ EDIT TASK
   const editTask = async (id, newTitle) => {
     if (!newTitle.trim()) return;
 
     await updateDoc(doc(db, "tasks", id), {
       title: newTitle
+    });
+  };
+
+  // ➕ ADD SUBTASK
+  const addSubtask = async (taskId, text) => {
+    if (!text.trim()) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated = [
+      ...(task.subtasks || []),
+      {
+        id: Date.now(),
+        text,
+        completed: false
+      }
+    ];
+
+    await updateDoc(doc(db, "tasks", taskId), {
+      subtasks: updated
+    });
+  };
+
+  // 🔁 TOGGLE SUBTASK
+  const toggleSubtask = async (taskId, subId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated = (task.subtasks || []).map(s =>
+      s.id === subId ? { ...s, completed: !s.completed } : s
+    );
+
+    await updateDoc(doc(db, "tasks", taskId), {
+      subtasks: updated
+    });
+  };
+
+  // ❌ DELETE SUBTASK
+  const deleteSubtask = async (taskId, subId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updated = (task.subtasks || []).filter(s => s.id !== subId);
+
+    await updateDoc(doc(db, "tasks", taskId), {
+      subtasks: updated
     });
   };
 
@@ -96,7 +144,10 @@ export function TaskProvider({ children }) {
       addTask,
       toggleTask,
       deleteTask,
-      editTask // 🔥 qo‘shildi
+      editTask,
+      addSubtask,
+      toggleSubtask,
+      deleteSubtask
     }}>
       {children}
     </TaskContext.Provider>
