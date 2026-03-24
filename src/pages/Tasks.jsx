@@ -17,7 +17,7 @@ export function TaskProvider({ children }) {
 
   const [tasks, setTasks] = useState([]);
 
-  // 🔥 USER ID (HAR USER UCHUN ALOHIDA)
+  // 🔥 HAR USER UCHUN ALOHIDA ID
   const getUserId = () => {
     let id = localStorage.getItem("userId");
     if (!id) {
@@ -29,57 +29,75 @@ export function TaskProvider({ children }) {
 
   const userId = getUserId();
 
-  // 📥 FAqat o‘z tasklarini olish
+  // 📥 FAQAT O‘Z TASKLARINI OLISH
   useEffect(() => {
+
     const q = query(
       collection(db, "tasks"),
       where("userId", "==", userId)
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      setTasks(snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })));
+      }));
+      setTasks(data);
     });
 
-    return () => unsub();
-  }, []);
+    return () => unsubscribe();
+
+  }, [userId]);
 
   // ➕ ADD TASK
   const addTask = async (title, date, priority, category) => {
-    await addDoc(collection(db, "tasks"), {
-      title,
-      date,
-      priority,
-      category,
-      completed: false,
-      userId: userId, // 🔥 MUHIM
-      created: new Date()
-    });
+    try {
+      await addDoc(collection(db, "tasks"), {
+        title,
+        date,
+        priority,
+        category,
+        completed: false,
+        userId: userId, // 🔥 MUHIM
+        created: new Date()
+      });
+    } catch (err) {
+      console.error("Add error:", err);
+    }
   };
 
-  // ❌ DELETE
+  // ❌ DELETE TASK
   const deleteTask = async (id) => {
-    await deleteDoc(doc(db, "tasks", id));
+    try {
+      await deleteDoc(doc(db, "tasks", id));
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
   };
 
-  // 🔁 TOGGLE
+  // 🔁 TOGGLE TASK
   const toggleTask = async (id) => {
-    const task = tasks.find(t => t.id === id);
+    try {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
 
-    await updateDoc(doc(db, "tasks", id), {
-      completed: !task.completed
-    });
+      await updateDoc(doc(db, "tasks", id), {
+        completed: !task.completed
+      });
+    } catch (err) {
+      console.error("Toggle error:", err);
+    }
   };
 
   return (
-    <TaskContext.Provider value={{
-      tasks,
-      addTask,
-      deleteTask,
-      toggleTask
-    }}>
+    <TaskContext.Provider
+      value={{
+        tasks,
+        addTask,
+        deleteTask,
+        toggleTask
+      }}
+    >
       {children}
     </TaskContext.Provider>
   );
