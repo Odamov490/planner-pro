@@ -2,7 +2,7 @@ import {Link} from "react-router-dom";
 
 export default function Sidebar(){
  return (
-  <div className="w-64 h-screen bg-gradient-to-b from-white to-blue-50 shadow-2xl p-6 flex flex-col justify-between">
+  <div className="w-64 h-screen bg-gradient-to-b from-white to-blue-50 shadow-2xl p-6 flex flex-col justify-between fixed left-0 top-0">
 
    <div>
      <h1 className="text-3xl font-extrabold mb-10 text-blue-600 tracking-wide">
