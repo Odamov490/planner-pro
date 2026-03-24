@@ -13,6 +13,9 @@ export default function Tasks(){
  const [priority,setPriority]=useState("");
  const [category,setCategory]=useState("");
 
+ // 🔥 NEW: bulk input
+ const [bulkText,setBulkText]=useState("");
+
  const {tasks,addTask,toggleTask,deleteTask}=useContext(TaskContext);
 
  const handleAdd=()=>{
@@ -29,7 +32,23 @@ export default function Tasks(){
   setCategory("");
  };
 
- // 🔍 SEARCH + FILTER + CATEGORY FILTER
+ // 🔥 BULK ADD FUNCTION
+ const handleBulkAdd = () => {
+  if(!bulkText) return notify("Tasklarni kiriting ❗");
+  if(!category) return notify("Kategoriya tanlang ❗");
+  if(!priority) return notify("Muhimlik tanlang ❗");
+
+  const lines = bulkText.split("\n").filter(line => line.trim() !== "");
+
+  lines.forEach(line => {
+    addTask(line.trim(), date, priority, category);
+  });
+
+  notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
+  setBulkText("");
+ };
+
+ // 🔍 FILTER
  const filteredTasks = tasks
   .filter(t => t.title.toLowerCase().includes(search.toLowerCase()))
   .filter(t => {
@@ -42,108 +61,106 @@ export default function Tasks(){
     return true;
   });
 
- // 📊 PROGRESS
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
 
  return (
   <div className="max-w-4xl mx-auto">
 
-   {/* TITLE */}
    <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
      Vazifalar
    </h1>
 
-   {/* 🔍 SEARCH */}
+   {/* SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
      placeholder="🔍 Qidirish..."
-     className="w-full p-3 rounded-xl border mb-4 focus:ring-2 focus:ring-blue-400 outline-none"
+     className="w-full p-3 rounded-xl border mb-4"
    />
 
-   {/* 📊 PROGRESS */}
+   {/* PROGRESS */}
    <div className="mb-6">
-     <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
+     <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
-         className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 transition-all duration-500"
+         className="bg-blue-500 h-3 rounded-full"
          style={{width: percent + "%"}}
        ></div>
      </div>
-     <p className="text-sm text-gray-500 mt-1">
-       {done} / {tasks.length} bajarildi
-     </p>
+     <p className="text-sm">{done} / {tasks.length}</p>
    </div>
 
-   {/* 🎯 FILTERS */}
+   {/* FILTER */}
    <div className="flex gap-2 mb-6 flex-wrap">
-
-     <select onChange={(e)=>setFilter(e.target.value)}
-       className="p-2 rounded-lg border">
+     <select onChange={(e)=>setFilter(e.target.value)} className="p-2 border rounded">
        <option value="all">Hammasi</option>
        <option value="done">Bajarilgan</option>
        <option value="active">Bajarilmagan</option>
      </select>
 
-     <select onChange={(e)=>setCategory(e.target.value)}
-       className="p-2 rounded-lg border">
-       <option value="">Kategoriya (filter)</option>
+     <select onChange={(e)=>setCategory(e.target.value)} className="p-2 border rounded">
+       <option value="">Kategoriya</option>
        <option>Ish</option>
        <option>O‘qish</option>
        <option>Shaxsiy</option>
      </select>
-
    </div>
 
-   {/* ➕ ADD FORM */}
-   <div className="bg-white p-4 rounded-2xl shadow-lg mb-6 space-y-3">
-
+   {/* ADD SINGLE */}
+   <div className="bg-white p-4 rounded-xl shadow mb-6">
      <input 
-       className="w-full p-3 border rounded-xl"
+       className="w-full p-2 border mb-2"
        value={title}
        onChange={e=>setTitle(e.target.value)}
-       placeholder="✍️ Vazifa yozing..."
+       placeholder="Vazifa..."
      />
 
      <div className="flex gap-2 flex-wrap">
+       <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="p-2 border"/>
 
-       <input 
-         type="date" 
-         value={date}
-         onChange={e=>setDate(e.target.value)}
-         className="p-2 border rounded-lg"
-       />
-
-       {/* PRIORITY (majburiy) */}
-       <select value={priority} onChange={(e)=>setPriority(e.target.value)}
-         className="p-2 border rounded-lg">
+       <select value={priority} onChange={(e)=>setPriority(e.target.value)} className="p-2 border">
          <option value="">Muhimlik *</option>
-         <option value="high">🔴 Yuqori</option>
-         <option value="medium">🟡 O‘rta</option>
-         <option value="low">🟢 Past</option>
+         <option value="high">Yuqori</option>
+         <option value="medium">O‘rta</option>
+         <option value="low">Past</option>
        </select>
 
-       {/* CATEGORY (majburiy) */}
-       <select value={category} onChange={(e)=>setCategory(e.target.value)}
-         className="p-2 border rounded-lg">
+       <select value={category} onChange={(e)=>setCategory(e.target.value)} className="p-2 border">
          <option value="">Kategoriya *</option>
          <option>Ish</option>
          <option>O‘qish</option>
          <option>Shaxsiy</option>
        </select>
-
      </div>
 
-     <button 
-       onClick={handleAdd}
-       className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl font-semibold hover:scale-105 transition"
-     >
-       ➕ Qo‘shish
+     <button onClick={handleAdd} className="mt-2 bg-blue-500 text-white px-4 py-2 rounded">
+       Qo‘shish
      </button>
-
    </div>
 
-   {/* 📋 TASK LIST */}
+   {/* 🔥 BULK ADD */}
+   <div className="bg-white p-4 rounded-xl shadow mb-6">
+     <h2 className="font-semibold mb-2">🔥 Bir nechta vazifa qo‘shish</h2>
+
+     <textarea
+       value={bulkText}
+       onChange={(e)=>setBulkText(e.target.value)}
+       placeholder={`Masalan:
+Task 1
+Task 2
+Task 3`}
+       className="w-full p-2 border rounded mb-2 h-32"
+     />
+
+     <button 
+       onClick={handleBulkAdd}
+       className="bg-green-500 text-white px-4 py-2 rounded hover:scale-105 transition"
+     >
+       🚀 Hammasini qo‘shish
+     </button>
+   </div>
+
+   {/* TASK LIST */}
    <div className="space-y-3">
     {filteredTasks.map(t=>(
      <TaskCard 
