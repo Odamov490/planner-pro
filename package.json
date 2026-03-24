@@ -1,5 +1,5 @@
 {
-  "name": "planner-pro",
+  "name": "planner-uz-pro",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -11,7 +11,9 @@
   "dependencies": {
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "react-router-dom": "^6.26.0"
+    "react-router-dom": "^6.26.0",
+    "date-fns": "^3.6.0",
+    "framer-motion": "^11.0.0"
   },
   "devDependencies": {
     "vite": "^5.3.0",

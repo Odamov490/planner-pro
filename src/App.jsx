@@ -2,6 +2,7 @@ import {BrowserRouter,Routes,Route} from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
+import Calendar from "./pages/Calendar";
 
 export default function App(){
  return (
@@ -12,6 +13,7 @@ export default function App(){
      <Routes>
       <Route path="/" element={<Dashboard/>}/>
       <Route path="/tasks" element={<Tasks/>}/>
+      <Route path="/calendar" element={<Calendar/>}/>
      </Routes>
     </div>
    </div>
