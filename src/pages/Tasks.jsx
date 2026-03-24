@@ -13,8 +13,12 @@ export default function Tasks(){
  const [priority,setPriority]=useState("");
  const [category,setCategory]=useState("");
 
+ // 🔥 BULK INPUT
+ const [bulkText,setBulkText]=useState("");
+
  const {tasks,addTask,toggleTask,deleteTask}=useContext(TaskContext);
 
+ // ➕ SINGLE ADD
  const handleAdd=()=>{
   if(!title) return notify("Vazifa nomini kiriting ❗");
   if(!category) return notify("Kategoriya tanlang ❗");
@@ -29,6 +33,27 @@ export default function Tasks(){
   setCategory("");
  };
 
+ // 🚀 BULK ADD
+ const handleBulkAdd = async () => {
+  if (!bulkText) return notify("Tasklarni kiriting ❗");
+  if (!category) return notify("Kategoriya tanlang ❗");
+  if (!priority) return notify("Muhimlik tanlang ❗");
+
+  const lines = bulkText
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l !== "");
+
+  // 🔥 parallel qo‘shish (tez)
+  await Promise.all(
+    lines.map(line => addTask(line, date, priority, category))
+  );
+
+  notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
+  setBulkText("");
+ };
+
+ // 🔍 FILTER
  const filteredTasks = tasks
   .filter(t => t.title?.toLowerCase().includes(search.toLowerCase()))
   .filter(t => {
@@ -41,6 +66,7 @@ export default function Tasks(){
     return true;
   });
 
+ // 📊 PROGRESS
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
 
@@ -51,6 +77,7 @@ export default function Tasks(){
      Vazifalar
    </h1>
 
+   {/* 🔍 SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
@@ -58,10 +85,11 @@ export default function Tasks(){
      className="w-full p-3 rounded-xl border mb-4"
    />
 
+   {/* 📊 PROGRESS */}
    <div className="mb-6">
      <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
-         className="bg-blue-500 h-3 rounded-full"
+         className="bg-blue-500 h-3 rounded-full transition-all"
          style={{width: percent + "%"}}
        ></div>
      </div>
@@ -70,6 +98,7 @@ export default function Tasks(){
      </p>
    </div>
 
+   {/* 🎯 FILTER */}
    <div className="flex gap-2 mb-6 flex-wrap">
 
      <select onChange={(e)=>setFilter(e.target.value)} className="p-2 border rounded">
@@ -87,6 +116,7 @@ export default function Tasks(){
 
    </div>
 
+   {/* ➕ SINGLE ADD */}
    <div className="bg-white p-4 rounded-xl shadow mb-6 space-y-3">
 
      <input 
@@ -123,13 +153,36 @@ export default function Tasks(){
 
      <button 
        onClick={handleAdd}
-       className="w-full bg-blue-500 text-white py-3 rounded-xl"
+       className="w-full bg-blue-500 text-white py-3 rounded-xl hover:scale-105 transition"
      >
        ➕ Qo‘shish
      </button>
 
    </div>
 
+   {/* 🔥 BULK ADD */}
+   <div className="bg-white p-4 rounded-xl shadow mb-6">
+     <h2 className="font-semibold mb-2">🔥 Bir nechta vazifa qo‘shish</h2>
+
+     <textarea
+       value={bulkText}
+       onChange={(e)=>setBulkText(e.target.value)}
+       placeholder={`Masalan:
+Email yozish
+Hisobot tayyorlash
+Sport qilish`}
+       className="w-full p-2 border rounded mb-3 h-32"
+     />
+
+     <button
+       onClick={handleBulkAdd}
+       className="bg-green-500 text-white px-4 py-2 rounded hover:scale-105 transition"
+     >
+       🚀 Hammasini qo‘shish
+     </button>
+   </div>
+
+   {/* 📋 TASK LIST */}
    <div className="space-y-3">
     {filteredTasks.map(t=>(
      <TaskCard 
