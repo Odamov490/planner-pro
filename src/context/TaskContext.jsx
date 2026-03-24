@@ -17,7 +17,7 @@ export function TaskProvider({ children }) {
 
   const [tasks, setTasks] = useState([]);
 
-  // 🔥 USER ID (har user uchun alohida)
+  // 🔥 USER ID
   const getUserId = () => {
     let id = localStorage.getItem("userId");
     if (!id) {
@@ -44,7 +44,7 @@ export function TaskProvider({ children }) {
       }));
 
       setTasks(data);
-      localStorage.setItem("tasks", JSON.stringify(data)); // backup
+      localStorage.setItem("tasks", JSON.stringify(data));
     });
 
     return () => unsubscribe();
@@ -81,12 +81,22 @@ export function TaskProvider({ children }) {
     await deleteDoc(doc(db, "tasks", id));
   };
 
+  // ✏️ EDIT (🔥 YANGI)
+  const editTask = async (id, newTitle) => {
+    if (!newTitle.trim()) return;
+
+    await updateDoc(doc(db, "tasks", id), {
+      title: newTitle
+    });
+  };
+
   return (
     <TaskContext.Provider value={{
       tasks,
       addTask,
       toggleTask,
-      deleteTask
+      deleteTask,
+      editTask // 🔥 qo‘shildi
     }}>
       {children}
     </TaskContext.Provider>
