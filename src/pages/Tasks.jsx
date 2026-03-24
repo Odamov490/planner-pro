@@ -15,7 +15,6 @@ export default function Tasks(){
 
  const [bulkText,setBulkText]=useState("");
 
- // 🔥 EDIT FUNCTION NI HAM OLDIK
  const {tasks,addTask,toggleTask,deleteTask,editTask}=useContext(TaskContext);
 
  // ➕ SINGLE ADD
@@ -65,9 +64,21 @@ export default function Tasks(){
     return true;
   });
 
+ // 📅 GROUP BY DATE
+ const groupedTasks = {};
+ filteredTasks.forEach(t=>{
+  const d = t.date || "Sanasiz";
+  if(!groupedTasks[d]) groupedTasks[d]=[];
+  groupedTasks[d].push(t);
+ });
+
+ const sortedDates = Object.keys(groupedTasks).sort();
+
  // 📊 PROGRESS
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
+
+ const today = new Date().toISOString().split("T")[0];
 
  return (
   <div className="max-w-4xl mx-auto">
@@ -115,7 +126,7 @@ export default function Tasks(){
 
    </div>
 
-   {/* ➕ SINGLE ADD */}
+   {/* ➕ ADD */}
    <div className="bg-white p-4 rounded-xl shadow mb-6 space-y-3">
 
      <input 
@@ -159,39 +170,56 @@ export default function Tasks(){
 
    </div>
 
-   {/* 🔥 BULK ADD */}
+   {/* 🔥 BULK */}
    <div className="bg-white p-4 rounded-xl shadow mb-6">
      <h2 className="font-semibold mb-2">🔥 Bir nechta vazifa qo‘shish</h2>
 
      <textarea
        value={bulkText}
        onChange={(e)=>setBulkText(e.target.value)}
-       placeholder={`Masalan:
-Email yozish
-Hisobot tayyorlash
-Sport qilish`}
        className="w-full p-2 border rounded mb-3 h-32"
      />
 
      <button
        onClick={handleBulkAdd}
-       className="bg-green-500 text-white px-4 py-2 rounded hover:scale-105 transition"
+       className="bg-green-500 text-white px-4 py-2 rounded"
      >
        🚀 Hammasini qo‘shish
      </button>
    </div>
 
-   {/* 📋 TASK LIST */}
-   <div className="space-y-3">
-    {filteredTasks.map(t=>(
-     <TaskCard 
-       key={t.id} 
-       task={t} 
-       onToggle={toggleTask} 
-       onDelete={deleteTask}
-       onEdit={editTask} // 🔥 ENG MUHIM FIX
-     />
+   {/* 📋 GROUPED TASKS */}
+   <div className="space-y-6">
+
+    {sortedDates.map(date=>(
+      <div key={date} className="bg-white p-4 rounded-2xl shadow">
+
+        {/* DATE */}
+        <div className="flex justify-between mb-3 border-b pb-2">
+          <h2 className={`font-bold ${date===today ? "text-red-500" : "text-blue-600"}`}>
+            📅 {date} {date===today && "(Bugun)"}
+          </h2>
+          <span className="text-sm text-gray-400">
+            {groupedTasks[date].length} ta
+          </span>
+        </div>
+
+        {/* TASKS */}
+        <div className="space-y-3">
+          {groupedTasks[date].map(t=>(
+            <TaskCard 
+              key={t.id} 
+              task={t} 
+              onToggle={toggleTask} 
+              onDelete={deleteTask}
+              onEdit={editTask}
+            />
+          ))}
+        </div>
+
+      </div>
     ))}
+
    </div>
 
   </div>
