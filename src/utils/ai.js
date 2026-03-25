@@ -13,9 +13,12 @@ export async function getSuggestion(text) {
 
     const data = await res.json();
 
+    console.log("AI RESPONSE:", data); // 👈 qo‘sh
+
     return data.result || "";
 
-  } catch {
+  } catch (e) {
+    console.error("AI ERROR:", e);
     return "";
   }
 }
