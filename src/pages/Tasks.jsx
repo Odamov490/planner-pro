@@ -142,7 +142,19 @@ export default function Tasks(){
     <h2 className="text-lg font-bold text-gray-700">
       ⚙️ Boshqaruv paneli
     </h2>
+ {/* 🔍 SEARCH */}
+  <div>
+    <p className="text-sm text-gray-500 mb-1">
+      🔍 Qidiruv
+    </p>
 
+    <input
+      value={search}
+      onChange={(e)=>setSearch(e.target.value)}
+      placeholder="Vazifa nomini yozing..."
+      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+    />
+  </div>
     {/* FILTER */}
     <select 
       value={filter}
@@ -243,19 +255,7 @@ export default function Tasks(){
 
   </div>
 
-  {/* 🔍 SEARCH */}
-  <div>
-    <p className="text-sm text-gray-500 mb-1">
-      🔍 Qidiruv
-    </p>
-
-    <input
-      value={search}
-      onChange={(e)=>setSearch(e.target.value)}
-      placeholder="Vazifa nomini yozing..."
-      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-    />
-  </div>
+ 
 
   {/* 📊 PROGRESSsss */}
   <div>
