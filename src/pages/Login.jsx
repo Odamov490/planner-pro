@@ -7,21 +7,32 @@ export default function Login(){
 
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
+  const [loading,setLoading]=useState(false);
 
   const handleLogin = async () => {
+    if(!email || !password) return alert("Email va password kiriting");
+
     try {
+      setLoading(true);
       await login(email,password);
-    } catch {
-      alert("Login xato ❌");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRegister = async () => {
+    if(!email || !password) return alert("Email va password kiriting");
+
     try {
+      setLoading(true);
       await register(email,password);
       alert("Ro‘yxatdan o‘tdingiz ✅");
-    } catch {
-      alert("Xatolik ❌");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,26 +60,25 @@ export default function Login(){
           className="w-full p-2 border rounded"
         />
 
-        {/* LOGIN */}
         <button
           onClick={handleLogin}
-          className="w-full bg-blue-500 text-white py-2 rounded hover:scale-105 transition"
+          disabled={loading}
+          className="w-full bg-blue-500 text-white py-2 rounded"
         >
-          Login
+          {loading ? "Kuting..." : "Login"}
         </button>
 
-        {/* REGISTER */}
         <button
           onClick={handleRegister}
-          className="w-full bg-green-500 text-white py-2 rounded hover:scale-105 transition"
+          disabled={loading}
+          className="w-full bg-green-500 text-white py-2 rounded"
         >
           Register
         </button>
 
-        {/* GOOGLE LOGIN */}
         <button
           onClick={loginWithGoogle}
-          className="w-full bg-red-500 text-white py-2 rounded flex items-center justify-center gap-2 hover:scale-105 transition"
+          className="w-full bg-red-500 text-white py-2 rounded"
         >
           🔴 Google orqali kirish
         </button>
