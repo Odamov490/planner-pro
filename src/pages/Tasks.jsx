@@ -1,11 +1,14 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { TaskContext } from "../context/TaskContext";
 import TaskCard from "../components/TaskCard";
 import { notify } from "../utils/notify";
+import { getSuggestion } from "../utils/ai"; // 🔥 AI qo‘shildi
 
 export default function Tasks(){
 
  const [input,setInput]=useState("");
+ const [suggestion,setSuggestion]=useState(""); // 🔥 AI
+
  const [date,setDate]=useState("");
  const [priority,setPriority]=useState("");
  const [category,setCategory]=useState("");
@@ -20,6 +23,30 @@ export default function Tasks(){
    deleteTask,
    editTask
  } = useContext(TaskContext);
+
+ // 🔥 AI AUTO SUGGEST
+ useEffect(() => {
+
+  if(input.length < 3){
+    setSuggestion("");
+    return;
+  }
+
+  const timeout = setTimeout(async () => {
+
+    console.log("AI SO‘RALDI:", input);
+
+    const res = await getSuggestion(input);
+
+    console.log("AI JAVOB:", res);
+
+    setSuggestion(res);
+
+  }, 500);
+
+  return () => clearTimeout(timeout);
+
+ }, [input]);
 
  // 🔥 ADD
  const handleAdd = async () => {
@@ -38,13 +65,23 @@ export default function Tasks(){
   notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
 
   setInput("");
+  setSuggestion(""); // 🔥 tozalash
  };
 
- // 🔥 ENTER
+ // 🔥 ENTER + TAB
  const handleKeyDown = (e) => {
+
+  // ENTER → qo‘shish
   if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
     handleAdd();
+  }
+
+  // TAB → AI ni olish
+  if(e.key === "Tab" && suggestion){
+    e.preventDefault();
+    setInput(suggestion);
+    setSuggestion("");
   }
  };
 
@@ -65,7 +102,6 @@ export default function Tasks(){
   groupedTasks[d].push(t);
  });
 
- // 🔥 BUGUN / ERTAGA LOGIC
  const today = new Date();
  const todayStr = today.toISOString().split("T")[0];
 
@@ -73,7 +109,6 @@ export default function Tasks(){
  tomorrow.setDate(today.getDate() + 1);
  const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
- // 🔥 SORT DATES (MUHIM)
  const sortedDates = Object.keys(groupedTasks).sort((a, b) => {
 
   if (a === todayStr) return -1;
@@ -91,12 +126,10 @@ export default function Tasks(){
  return (
   <div className="max-w-4xl mx-auto">
 
-   {/* TITLE */}
    <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
      Vazifalar
    </h1>
 
-   {/* SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
@@ -104,7 +137,6 @@ export default function Tasks(){
      className="w-full p-3 rounded-xl border mb-4"
    />
 
-   {/* PROGRESS */}
    <div className="mb-6">
      <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
@@ -117,7 +149,6 @@ export default function Tasks(){
      </p>
    </div>
 
-   {/* FILTER */}
    <div className="flex gap-2 mb-6">
      <select 
        onChange={(e)=>setFilter(e.target.value)} 
@@ -138,13 +169,13 @@ export default function Tasks(){
          type="date"
          value={date}
          onChange={(e)=>setDate(e.target.value)}
-         className="p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
+         className="p-3 border rounded-xl"
        />
 
        <select 
          value={priority}
          onChange={(e)=>setPriority(e.target.value)}
-         className="p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
+         className="p-3 border rounded-xl"
        >
          <option value="">Muhimlik *</option>
          <option value="high">🔴 Yuqori</option>
@@ -155,7 +186,7 @@ export default function Tasks(){
        <select 
          value={category}
          onChange={(e)=>setCategory(e.target.value)}
-         className="p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
+         className="p-3 border rounded-xl"
        >
          <option value="">Kategoriya *</option>
          <option>Ish</option>
@@ -166,19 +197,26 @@ export default function Tasks(){
      </div>
 
      {date && priority && category && (
-       <div className="space-y-3">
+       <div className="space-y-2">
 
          <textarea
            value={input}
            onChange={(e)=>setInput(e.target.value)}
            onKeyDown={handleKeyDown}
            placeholder="✍️ Vazifa yozing..."
-           className="w-full p-4 border rounded-xl min-h-[120px] focus:ring-2 focus:ring-blue-400"
+           className="w-full p-4 border rounded-xl min-h-[120px]"
          />
+
+         {/* 🔥 AI suggestion */}
+         {suggestion && (
+           <div className="text-gray-400 text-sm px-2">
+             🤖 {suggestion} (Tab bosing)
+           </div>
+         )}
 
          <button
            onClick={handleAdd}
-           className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl font-semibold hover:scale-105 transition"
+           className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl"
          >
            ➕ Qo‘shish
          </button>
@@ -188,34 +226,20 @@ export default function Tasks(){
 
    </div>
 
-   {/* TASK LIST */}
    <div className="space-y-6">
 
     {sortedDates.map(date=>(
       <div key={date} className="bg-white p-4 rounded-2xl shadow">
 
-        {/* HEADER */}
         <div className="flex justify-between mb-3 border-b pb-2">
-          <h2 className={`font-bold ${
-            date === todayStr
-              ? "text-red-500"
-              : date === tomorrowStr
-              ? "text-orange-500"
-              : "text-blue-600"
-          }`}>
-            📅 {date === todayStr 
-                ? "Bugun" 
-                : date === tomorrowStr 
-                ? "Ertaga" 
-                : date}
+          <h2 className="font-bold text-blue-600">
+            📅 {date}
           </h2>
-
           <span className="text-sm text-gray-400">
             {groupedTasks[date].length} ta
           </span>
         </div>
 
-        {/* TASKS */}
         <div className="space-y-3">
           {groupedTasks[date]
             .sort((a,b)=> new Date(b.created) - new Date(a.created))
