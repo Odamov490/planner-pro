@@ -13,9 +13,15 @@ export default function Tasks(){
  const [search,setSearch]=useState("");
  const [filter,setFilter]=useState("all");
 
- const {tasks,addTask,toggleTask,deleteTask,editTask} = useContext(TaskContext);
+ const {
+   tasks,
+   addTask,
+   toggleTask,
+   deleteTask,
+   editTask
+ } = useContext(TaskContext);
 
- // 🔥 ADD
+ // 🔥 ADD (multi + enter)
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -51,13 +57,27 @@ export default function Tasks(){
     return true;
   });
 
+ // 📅 GROUP BY DATE
+ const groupedTasks = {};
+ filteredTasks.forEach(t=>{
+  const d = t.date || "Sanasiz";
+  if(!groupedTasks[d]) groupedTasks[d]=[];
+  groupedTasks[d].push(t);
+ });
+
+ // 🔥 SORT (YANGI TEPADA)
+ const sortedDates = Object.keys(groupedTasks)
+   .sort((a,b)=> new Date(b) - new Date(a));
+
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
+
+ const today = new Date().toISOString().split("T")[0];
 
  return (
   <div className="max-w-4xl mx-auto">
 
-   <h1 className="text-3xl font-bold mb-6 text-blue-600">
+   <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
      Vazifalar
    </h1>
 
@@ -66,7 +86,7 @@ export default function Tasks(){
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
      placeholder="🔍 Qidirish..."
-     className="w-full p-3 border rounded-xl mb-4"
+     className="w-full p-3 rounded-xl border mb-4"
    />
 
    {/* PROGRESS */}
@@ -77,10 +97,12 @@ export default function Tasks(){
          style={{width: percent + "%"}}
        ></div>
      </div>
-     <p className="text-sm mt-1">{done} / {tasks.length} bajarildi</p>
+     <p className="text-sm mt-1">
+       {done} / {tasks.length} bajarildi
+     </p>
    </div>
 
-   {/* 🔥 FILTER */}
+   {/* FILTER */}
    <div className="flex gap-2 mb-6">
      <select onChange={(e)=>setFilter(e.target.value)} className="p-2 border rounded-xl">
        <option value="all">Hammasi</option>
@@ -89,23 +111,23 @@ export default function Tasks(){
      </select>
    </div>
 
-   {/* 🔥 SMART ADD BLOCK */}
+   {/* 🔥 ADD BLOCK */}
    <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 space-y-4">
 
-     {/* 🎯 STEP 1 */}
+     {/* STEP 1 */}
      <div className="flex gap-3 flex-wrap">
 
        <input 
          type="date"
          value={date}
          onChange={(e)=>setDate(e.target.value)}
-         className="p-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400"
+         className="p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
        />
 
        <select 
          value={priority}
          onChange={(e)=>setPriority(e.target.value)}
-         className="p-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400"
+         className="p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
        >
          <option value="">Muhimlik *</option>
          <option value="high">🔴 Yuqori</option>
@@ -116,7 +138,7 @@ export default function Tasks(){
        <select 
          value={category}
          onChange={(e)=>setCategory(e.target.value)}
-         className="p-3 border rounded-xl shadow-sm focus:ring-2 focus:ring-blue-400"
+         className="p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
        >
          <option value="">Kategoriya *</option>
          <option>Ish</option>
@@ -126,7 +148,7 @@ export default function Tasks(){
 
      </div>
 
-     {/* 🔥 STEP 2 (AUTO SHOW) */}
+     {/* 🔥 AUTO INPUT */}
      {date && priority && category && (
        <div className="space-y-3">
 
@@ -153,17 +175,38 @@ Enter → qo‘shish`}
 
    </div>
 
-   {/* TASK LIST */}
-   <div className="space-y-3">
-    {filteredTasks.map(t=>(
-     <TaskCard
-       key={t.id}
-       task={t}
-       onToggle={toggleTask}
-       onDelete={deleteTask}
-       onEdit={editTask}
-     />
+   {/* 🔥 GROUPED TASKS */}
+   <div className="space-y-6">
+
+    {sortedDates.map(date=>(
+      <div key={date} className="bg-white p-4 rounded-2xl shadow">
+
+        <div className="flex justify-between mb-3 border-b pb-2">
+          <h2 className={`font-bold ${date===today ? "text-red-500" : "text-blue-600"}`}>
+            📅 {date} {date===today && "(Bugun)"}
+          </h2>
+          <span className="text-sm text-gray-400">
+            {groupedTasks[date].length} ta
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {groupedTasks[date]
+            .sort((a,b)=>b.created - a.created) // 🔥 yangi tepada
+            .map(t=>(
+              <TaskCard 
+                key={t.id} 
+                task={t} 
+                onToggle={toggleTask} 
+                onDelete={deleteTask}
+                onEdit={editTask}
+              />
+          ))}
+        </div>
+
+      </div>
     ))}
+
    </div>
 
   </div>
