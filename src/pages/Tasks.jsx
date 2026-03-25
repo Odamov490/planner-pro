@@ -236,28 +236,78 @@ export default function Tasks(){
      <option value="active">Bajarilmagan</option>
    </select>
 
-   {/* ADD */}
-   <div className="bg-white p-6 rounded-2xl shadow space-y-3">
+  {/* ADD */}
+<div className="bg-white p-6 rounded-2xl shadow space-y-5 border">
 
-     <div className="flex gap-2 flex-wrap">
+  {/* 📅 DATE */}
+  <div>
+    <p className="text-sm font-medium mb-2 text-gray-500">📅 Sana</p>
 
-       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)} className="p-2 border rounded-xl"/>
+    <input
+      type="date"
+      value={date}
+      onChange={(e)=>setDate(e.target.value)}
+      className="p-3 border rounded-xl w-full focus:ring-2 focus:ring-blue-400 outline-none transition"
+    />
+  </div>
 
-       <select value={priority} onChange={(e)=>setPriority(e.target.value)} className="p-2 border rounded-xl">
-         <option value="">Muhimlik</option>
-         <option value="high">🔴</option>
-         <option value="medium">🟡</option>
-         <option value="low">🟢</option>
-       </select>
+  {/* ⚡ PRIORITY */}
+  <div>
+    <p className="text-sm font-medium mb-2 text-gray-500">⚡ Muhimlik</p>
 
-       <select value={category} onChange={(e)=>setCategory(e.target.value)} className="p-2 border rounded-xl">
-         <option value="">Kategoriya</option>
-         <option>Ish</option>
-         <option>O‘qish</option>
-         <option>Shaxsiy</option>
-       </select>
+    <div className="flex gap-2 flex-wrap">
 
-     </div>
+      {[
+        {value:"high", label:"Yuqori", icon:"🔴"},
+        {value:"medium", label:"O‘rta", icon:"🟡"},
+        {value:"low", label:"Past", icon:"🟢"}
+      ].map(p => (
+        <button
+          key={p.value}
+          onClick={()=>setPriority(p.value)}
+          className={`px-4 py-2 rounded-xl border transition-all duration-200 flex items-center gap-2
+            ${priority===p.value
+              ? "bg-blue-500 text-white shadow-md scale-105"
+              : "bg-white hover:bg-gray-100"}
+          `}
+        >
+          <span>{p.icon}</span>
+          {p.label}
+        </button>
+      ))}
+
+    </div>
+  </div>
+
+  {/* 📂 CATEGORY */}
+  <div>
+    <p className="text-sm font-medium mb-2 text-gray-500">📂 Kategoriya</p>
+
+    <div className="flex gap-2 flex-wrap">
+
+      {[
+        {value:"Ish", icon:"💼"},
+        {value:"O‘qish", icon:"📚"},
+        {value:"Shaxsiy", icon:"🏠"}
+      ].map(c => (
+        <button
+          key={c.value}
+          onClick={()=>setCategory(c.value)}
+          className={`px-4 py-2 rounded-xl border transition-all duration-200 flex items-center gap-2
+            ${category===c.value
+              ? "bg-indigo-500 text-white shadow-md scale-105"
+              : "bg-white hover:bg-gray-100"}
+          `}
+        >
+          <span>{c.icon}</span>
+          {c.value}
+        </button>
+      ))}
+
+    </div>
+  </div>
+
+</div>
 
      {date && priority && category && (
        <>
