@@ -257,7 +257,7 @@ export default function Tasks(){
     />
   </div>
 
-  {/* 📊 PROGRESS */}
+  {/* 📊 PROGRESSsss */}
   <div>
     <div className="flex justify-between text-xs text-gray-500 mb-1">
       <span>Bajarilish</span>
