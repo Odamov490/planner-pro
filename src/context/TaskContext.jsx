@@ -24,7 +24,6 @@ export function TaskProvider({ children }) {
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
 
-      // ❌ logout
       if (!user) {
         setTasks([]);
         if (unsubIncoming) unsubIncoming();
@@ -32,48 +31,54 @@ export function TaskProvider({ children }) {
         return;
       }
 
-      // 🔵 MENGA BERILGAN
       const qIncoming = query(
         collection(db, "tasks"),
         where("assignedTo", "==", user.uid)
       );
 
-      // 🟡 MEN BERGAN
       const qOutgoing = query(
         collection(db, "tasks"),
         where("userId", "==", user.uid)
       );
 
-      // eski listenerlarni tozalash
       if (unsubIncoming) unsubIncoming();
       if (unsubOutgoing) unsubOutgoing();
 
+      let incomingData = [];
+      let outgoingData = [];
+
+      const merge = () => {
+        const merged = [...incomingData, ...outgoingData];
+
+        // 🔥 duplicate remove
+        const unique = merged.filter(
+          (v, i, arr) => arr.findIndex(x => x.id === v.id) === i
+        );
+
+        // 🔥 sort (new first)
+        unique.sort((a, b) => new Date(b.created) - new Date(a.created));
+
+        setTasks(unique);
+      };
+
       // 📥 incoming
       unsubIncoming = onSnapshot(qIncoming, (snapshot) => {
-        const dataIncoming = snapshot.docs.map(doc => ({
+        incomingData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           type: "incoming"
         }));
-
-        setTasks(prev => {
-          const outgoing = prev.filter(t => t.type === "outgoing");
-          return [...outgoing, ...dataIncoming];
-        });
+        merge();
       });
 
       // 📤 outgoing
       unsubOutgoing = onSnapshot(qOutgoing, (snapshot) => {
-        const dataOutgoing = snapshot.docs.map(doc => ({
+        outgoingData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
           type: "outgoing"
         }));
-
-        setTasks(prev => {
-          const incoming = prev.filter(t => t.type === "incoming");
-          return [...incoming, ...dataOutgoing];
-        });
+        merge();
       });
 
     });
@@ -87,7 +92,7 @@ export function TaskProvider({ children }) {
   }, []);
 
   // ➕ ADD TASK
-  const addTask = async (title, date, priority, category, assignedUser=null) => {
+  const addTask = async (title, date, priority, category, assignedUser=null, assignedEmail=null) => {
 
     if (!title) return;
 
@@ -101,17 +106,18 @@ export function TaskProvider({ children }) {
       category,
       completed: false,
 
-      userId: user.uid, // kim yaratdi
-      createdByEmail: user.email, // 🔥 kim berdi
+      userId: user.uid,
+      createdByEmail: user.email,
 
-      assignedTo: assignedUser || user.uid, // kimga berildi
+      assignedTo: assignedUser || user.uid,
+      assignedEmail: assignedEmail || user.email, // 🔥 MUHIM
 
       subtasks: [],
       created: new Date()
     });
   };
 
-  // 🔁 TOGGLE TASK
+  // 🔁 TOGGLE
   const toggleTask = async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -121,12 +127,12 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ❌ DELETE TASK
+  // ❌ DELETE
   const deleteTask = async (id) => {
     await deleteDoc(doc(db, "tasks", id));
   };
 
-  // ✏️ EDIT TASK
+  // ✏️ EDIT
   const editTask = async (id, newTitle) => {
     if (!newTitle.trim()) return;
 
@@ -135,7 +141,7 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ➕ ADD SUBTASK
+  // ➕ SUBTASK
   const addSubtask = async (taskId, text) => {
 
     if (!text.trim()) return;
@@ -157,7 +163,7 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // 🔁 TOGGLE SUBTASK
+  // 🔁 SUB TOGGLE
   const toggleSubtask = async (taskId, subId) => {
 
     const task = tasks.find(t => t.id === taskId);
@@ -174,7 +180,7 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ❌ DELETE SUBTASK
+  // ❌ SUB DELETE
   const deleteSubtask = async (taskId, subId) => {
 
     const task = tasks.find(t => t.id === taskId);
@@ -187,7 +193,7 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ✏️ EDIT SUBTASK
+  // ✏️ SUB EDIT
   const editSubtask = async (taskId, subId, newText) => {
 
     if (!newText.trim()) return;
