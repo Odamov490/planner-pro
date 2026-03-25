@@ -2,12 +2,14 @@ import { useState, useContext, useEffect } from "react";
 import { TaskContext } from "../context/TaskContext";
 import TaskCard from "../components/TaskCard";
 import { notify } from "../utils/notify";
-import { getSuggestion } from "../utils/ai"; // 🔥 AI qo‘shildi
+import { getSuggestion } from "../utils/ai";
 
 export default function Tasks(){
 
  const [input,setInput]=useState("");
- const [suggestion,setSuggestion]=useState(""); // 🔥 AI
+
+ const [suggestions,setSuggestions]=useState([]);
+ const [activeIndex,setActiveIndex]=useState(0);
 
  const [date,setDate]=useState("");
  const [priority,setPriority]=useState("");
@@ -24,31 +26,28 @@ export default function Tasks(){
    editTask
  } = useContext(TaskContext);
 
- // 🔥 AI AUTO SUGGEST
- useEffect(() => {
+ // 🤖 AI SUGGEST (tezlashtirilgan)
+ useEffect(()=>{
 
   if(input.length < 3){
-    setSuggestion("");
+    setSuggestions([]);
     return;
   }
 
-  const timeout = setTimeout(async () => {
-
-    console.log("AI SO‘RALDI:", input);
+  const t = setTimeout(async()=>{
 
     const res = await getSuggestion(input);
 
-    console.log("AI JAVOB:", res);
+    setSuggestions(res);
+    setActiveIndex(0);
 
-    setSuggestion(res);
+  },300);
 
-  }, 500);
+  return ()=>clearTimeout(t);
 
-  return () => clearTimeout(timeout);
+ },[input]);
 
- }, [input]);
-
- // 🔥 ADD
+ // ➕ ADD
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -65,23 +64,35 @@ export default function Tasks(){
   notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
 
   setInput("");
-  setSuggestion(""); // 🔥 tozalash
+  setSuggestions([]);
  };
 
- // 🔥 ENTER + TAB
+ // ⌨️ KEYBOARD CONTROL
  const handleKeyDown = (e) => {
 
-  // ENTER → qo‘shish
+  // ENTER
   if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
     handleAdd();
   }
 
-  // TAB → AI ni olish
-  if(e.key === "Tab" && suggestion){
+  // TAB → AI qabul qilish
+  if(e.key === "Tab" && suggestions.length){
     e.preventDefault();
-    setInput(suggestion);
-    setSuggestion("");
+    setInput(suggestions[activeIndex]);
+    setSuggestions([]);
+  }
+
+  // ↓
+  if(e.key === "ArrowDown"){
+    e.preventDefault();
+    setActiveIndex(prev => (prev + 1) % suggestions.length);
+  }
+
+  // ↑
+  if(e.key === "ArrowUp"){
+    e.preventDefault();
+    setActiveIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
   }
  };
 
@@ -199,18 +210,44 @@ export default function Tasks(){
      {date && priority && category && (
        <div className="space-y-2">
 
-         <textarea
-           value={input}
-           onChange={(e)=>setInput(e.target.value)}
-           onKeyDown={handleKeyDown}
-           placeholder="✍️ Vazifa yozing..."
-           className="w-full p-4 border rounded-xl min-h-[120px]"
-         />
+         {/* 👻 GHOST INPUT */}
+         <div className="relative">
 
-         {/* 🔥 AI suggestion */}
-         {suggestion && (
-           <div className="text-gray-400 text-sm px-2">
-             🤖 {suggestion} (Tab bosing)
+          {suggestions.length > 0 && (
+            <div className="absolute inset-0 p-4 text-gray-400 pointer-events-none whitespace-pre-wrap">
+              {input}
+              <span className="opacity-50">
+                {suggestions[activeIndex]?.slice(input.length)}
+              </span>
+            </div>
+          )}
+
+          <textarea
+            value={input}
+            onChange={(e)=>setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="✍️ Vazifa yozing..."
+            className="w-full p-4 border rounded-xl min-h-[120px] bg-transparent relative z-10"
+          />
+
+         </div>
+
+         {/* 🤖 VARIANTS */}
+         {suggestions.length > 0 && (
+           <div className="bg-white border rounded-xl shadow p-2 space-y-1">
+
+            {suggestions.map((s,i)=>(
+              <div
+                key={i}
+                className={`p-2 rounded cursor-pointer ${
+                  i===activeIndex ? "bg-blue-100" : ""
+                }`}
+                onClick={()=>setInput(s)}
+              >
+                🤖 {s}
+              </div>
+            ))}
+
            </div>
          )}
 
@@ -219,6 +256,22 @@ export default function Tasks(){
            className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl"
          >
            ➕ Qo‘shish
+         </button>
+
+         {/* 🤖 AUTO PLAN */}
+         <button
+           onClick={async()=>{
+            const res = await getSuggestion("Bugungi kun uchun 5 ta vazifa tuz");
+
+            await Promise.all(
+              res.map(r => addTask(r, date, priority, category))
+            );
+
+            notify("AI reja tuzdi 🤖");
+           }}
+           className="w-full bg-green-500 text-white py-2 rounded-xl"
+         >
+           🤖 Kunlik reja tuz
          </button>
 
        </div>
@@ -260,5 +313,5 @@ export default function Tasks(){
    </div>
 
   </div>
- )
+ );
 }
