@@ -17,7 +17,7 @@ export default function Calendar(){
   grouped[t.date].push(t);
  });
 
- const sortedDates = Object.keys(grouped).sort();
+ const sortedDates = Object.keys(grouped).sort((a,b)=> new Date(a)-new Date(b));
 
  // ⏰ DEADLINE
  const getDaysLeft = (date)=>{
@@ -31,7 +31,7 @@ export default function Calendar(){
    {/* HEADER */}
    <h1 className="text-3xl font-bold text-blue-600">📅 Kalendar</h1>
 
-   {/* 📌 TODAY BLOCK */}
+   {/* 📌 TODAY */}
    <div className="bg-blue-50 p-4 rounded-2xl shadow">
      <h2 className="font-bold mb-2">📌 Bugungi vazifalar</h2>
 
@@ -40,8 +40,27 @@ export default function Calendar(){
      )}
 
      {tasks.filter(t=>t.date===today).map(t=>(
-       <div key={t.id} className="p-2 bg-white rounded mb-2">
-         {t.title}
+       <div key={t.id} className="p-3 bg-white rounded mb-2">
+
+         {/* TASK */}
+         <p className={t.completed ? "line-through text-gray-400" : ""}>
+           {t.title}
+         </p>
+
+         {/* SUBTASKS */}
+         {t.subtasks?.length > 0 && (
+           <div className="ml-4 mt-2 space-y-1 text-sm">
+             {t.subtasks.map(s=>(
+               <div 
+                 key={s.id}
+                 className={s.completed ? "line-through text-gray-400" : ""}
+               >
+                 ▸ {s.text}
+               </div>
+             ))}
+           </div>
+         )}
+
        </div>
      ))}
    </div>
@@ -54,7 +73,7 @@ export default function Calendar(){
      return (
        <div key={date} className="bg-white p-4 rounded-2xl shadow">
 
-         {/* DATE */}
+         {/* DATE HEADER */}
          <div 
            onClick={()=>setSelectedDate(date)}
            className={`cursor-pointer flex justify-between mb-3 ${
@@ -66,7 +85,7 @@ export default function Calendar(){
          </div>
 
          {/* TASKS */}
-         <div className="space-y-2">
+         <div className="space-y-3">
            {grouped[date].map(task=>{
 
              const daysLeft = getDaysLeft(task.date);
@@ -75,34 +94,54 @@ export default function Calendar(){
              return (
                <div 
                  key={task.id}
-                 className={`p-3 rounded-xl flex justify-between items-center
-                 ${task.completed ? "bg-gray-100 line-through" : ""}
+                 className={`p-3 rounded-xl 
+                 ${task.completed ? "bg-gray-100" : ""}
                  ${isLate ? "bg-red-100" : "bg-blue-50"}`}
                >
 
-                 <div>
-                   <p>{task.title}</p>
+                 {/* MAIN TASK */}
+                 <div className="flex justify-between">
 
-                   {/* PRIORITY */}
-                   <div className="text-xs flex gap-2 mt-1">
+                   <p className={task.completed ? "line-through text-gray-400" : ""}>
+                     {task.title}
+                   </p>
 
-                     {task.priority==="high" && <span className="text-red-500">🔴 Yuqori</span>}
-                     {task.priority==="medium" && <span className="text-yellow-500">🟡 O‘rta</span>}
-                     {task.priority==="low" && <span className="text-green-500">🟢 Past</span>}
+                   <span>
+                     {task.completed ? "✔" : "⏳"}
+                   </span>
 
-                     {/* ⏰ COUNTDOWN */}
-                     {!task.completed && (
-                       <span className="text-gray-400">
-                         {isLate ? "Kechikdi ❗" : `${daysLeft} kun qoldi`}
-                       </span>
-                     )}
-
-                   </div>
                  </div>
 
-                 <span>
-                   {task.completed ? "✔" : "⏳"}
-                 </span>
+                 {/* SUBTASKS */}
+                 {task.subtasks?.length > 0 && (
+                   <div className="ml-4 mt-2 space-y-1 text-sm">
+
+                     {task.subtasks.map(s=>(
+                       <div 
+                         key={s.id}
+                         className={s.completed ? "line-through text-gray-400" : ""}
+                       >
+                         ▸ {s.text}
+                       </div>
+                     ))}
+
+                   </div>
+                 )}
+
+                 {/* INFO */}
+                 <div className="text-xs flex gap-2 mt-2">
+
+                   {task.priority==="high" && <span className="text-red-500">🔴 Yuqori</span>}
+                   {task.priority==="medium" && <span className="text-yellow-500">🟡 O‘rta</span>}
+                   {task.priority==="low" && <span className="text-green-500">🟢 Past</span>}
+
+                   {!task.completed && (
+                     <span className="text-gray-400">
+                       {isLate ? "Kechikdi ❗" : `${daysLeft} kun qoldi`}
+                     </span>
+                   )}
+
+                 </div>
 
                </div>
              )
@@ -121,12 +160,32 @@ export default function Calendar(){
 
          <h2 className="font-bold mb-3">{selectedDate}</h2>
 
-         <div className="space-y-2 max-h-60 overflow-y-auto">
+         <div className="space-y-3 max-h-60 overflow-y-auto">
 
            {grouped[selectedDate].map(t=>(
-             <div key={t.id} className="p-2 bg-gray-100 rounded">
-               {t.title}
+
+             <div key={t.id} className="p-3 bg-gray-100 rounded">
+
+               <p className={t.completed ? "line-through text-gray-400" : ""}>
+                 {t.title}
+               </p>
+
+               {/* SUBTASKS */}
+               {t.subtasks?.length > 0 && (
+                 <div className="ml-4 mt-2 text-sm space-y-1">
+                   {t.subtasks.map(s=>(
+                     <div 
+                       key={s.id}
+                       className={s.completed ? "line-through text-gray-400" : ""}
+                     >
+                       ▸ {s.text}
+                     </div>
+                   ))}
+                 </div>
+               )}
+
              </div>
+
            ))}
 
          </div>
