@@ -236,73 +236,115 @@ export default function Tasks(){
      <option value="active">Bajarilmagan</option>
    </select>
 
-  {/* ADD */}
-<div className="bg-white p-6 rounded-2xl shadow space-y-5 border">
+   {/* ADD */}
+   <div className="bg-white p-6 rounded-2xl shadow space-y-3">
+
+    <div className="bg-white p-5 rounded-2xl shadow border space-y-4">
 
   {/* 📅 DATE */}
-  <div>
-    <p className="text-sm font-medium mb-2 text-gray-500">📅 Sana</p>
+  <div className="flex items-center justify-between border-b pb-3">
+    <span className="text-sm font-medium text-gray-600">
+      📅 Vazifa sanasi
+    </span>
 
     <input
       type="date"
       value={date}
       onChange={(e)=>setDate(e.target.value)}
-      className="p-3 border rounded-xl w-full focus:ring-2 focus:ring-blue-400 outline-none transition"
+      className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
     />
   </div>
 
   {/* ⚡ PRIORITY */}
-  <div>
-    <p className="text-sm font-medium mb-2 text-gray-500">⚡ Muhimlik</p>
+  <div className="space-y-2 border-b pb-3">
+    <p className="text-sm font-medium text-gray-600">
+      ⚡ Muhimlik darajasini tanlang
+    </p>
 
-    <div className="flex gap-2 flex-wrap">
+    <div className="grid grid-cols-3 gap-2">
 
-      {[
-        {value:"high", label:"Yuqori", icon:"🔴"},
-        {value:"medium", label:"O‘rta", icon:"🟡"},
-        {value:"low", label:"Past", icon:"🟢"}
-      ].map(p => (
-        <button
-          key={p.value}
-          onClick={()=>setPriority(p.value)}
-          className={`px-4 py-2 rounded-xl border transition-all duration-200 flex items-center gap-2
-            ${priority===p.value
-              ? "bg-blue-500 text-white shadow-md scale-105"
-              : "bg-white hover:bg-gray-100"}
-          `}
-        >
-          <span>{p.icon}</span>
-          {p.label}
-        </button>
-      ))}
+      <button
+        onClick={()=>setPriority("high")}
+        className={`p-3 border text-sm transition
+          ${priority==="high"
+            ? "border-black bg-gray-100 font-semibold"
+            : "hover:bg-gray-50"}
+        `}
+      >
+        🔴 Yuqori
+        <p className="text-xs text-gray-400">Shoshilinch vazifa</p>
+      </button>
+
+      <button
+        onClick={()=>setPriority("medium")}
+        className={`p-3 border text-sm transition
+          ${priority==="medium"
+            ? "border-black bg-gray-100 font-semibold"
+            : "hover:bg-gray-50"}
+        `}
+      >
+        🟡 O‘rta
+        <p className="text-xs text-gray-400">Oddiy vazifa</p>
+      </button>
+
+      <button
+        onClick={()=>setPriority("low")}
+        className={`p-3 border text-sm transition
+          ${priority==="low"
+            ? "border-black bg-gray-100 font-semibold"
+            : "hover:bg-gray-50"}
+        `}
+      >
+        🟢 Past
+        <p className="text-xs text-gray-400">Keyin qilish mumkin</p>
+      </button>
 
     </div>
   </div>
 
   {/* 📂 CATEGORY */}
-  <div>
-    <p className="text-sm font-medium mb-2 text-gray-500">📂 Kategoriya</p>
+  <div className="space-y-2">
+    <p className="text-sm font-medium text-gray-600">
+      📂 Vazifa turi
+    </p>
 
-    <div className="flex gap-2 flex-wrap">
+    <div className="grid grid-cols-3 gap-2">
 
-      {[
-        {value:"Ish", icon:"💼"},
-        {value:"O‘qish", icon:"📚"},
-        {value:"Shaxsiy", icon:"🏠"}
-      ].map(c => (
-        <button
-          key={c.value}
-          onClick={()=>setCategory(c.value)}
-          className={`px-4 py-2 rounded-xl border transition-all duration-200 flex items-center gap-2
-            ${category===c.value
-              ? "bg-indigo-500 text-white shadow-md scale-105"
-              : "bg-white hover:bg-gray-100"}
-          `}
-        >
-          <span>{c.icon}</span>
-          {c.value}
-        </button>
-      ))}
+      <button
+        onClick={()=>setCategory("Ish")}
+        className={`p-3 border text-sm transition
+          ${category==="Ish"
+            ? "border-black bg-gray-100 font-semibold"
+            : "hover:bg-gray-50"}
+        `}
+      >
+        💼 Ish
+        <p className="text-xs text-gray-400">Ishga oid</p>
+      </button>
+
+      <button
+        onClick={()=>setCategory("O‘qish")}
+        className={`p-3 border text-sm transition
+          ${category==="O‘qish"
+            ? "border-black bg-gray-100 font-semibold"
+            : "hover:bg-gray-50"}
+        `}
+      >
+        📚 O‘qish
+        <p className="text-xs text-gray-400">Ta’lim / dars</p>
+      </button>
+
+      <button
+        onClick={()=>setCategory("Shaxsiy")}
+        className={`p-3 border text-sm transition
+          ${category==="Shaxsiy"
+            ? "border-black bg-gray-100 font-semibold"
+            : "hover:bg-gray-50"}
+        `}
+      >
+        🏠 Shaxsiy
+        <p className="text-xs text-gray-400">Kundalik ishlar</p>
+      </button>
 
     </div>
   </div>
