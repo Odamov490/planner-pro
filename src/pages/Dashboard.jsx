@@ -12,7 +12,7 @@ export default function Dashboard(){
  const done = tasks.filter(t=>t.completed).length;
  const active = tasks.length - done;
 
- // 🔥 SUBTASK STATS
+ // 🔥 SUBTASK
  let totalSub = 0;
  let doneSub = 0;
 
@@ -50,7 +50,7 @@ export default function Dashboard(){
   value
  }));
 
- // 🔥 DATE ACTIVITY
+ // 🔥 DATE
  const dateStats = {};
  tasks.forEach(t=>{
   if(!t.date) return;
@@ -63,136 +63,114 @@ export default function Dashboard(){
  }));
 
  return (
-  <div className="space-y-6">
+  <div className="space-y-8">
 
    {/* HEADER */}
    <div>
-     <h1 className="text-3xl font-extrabold text-blue-600">
+     <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
        📊 Dashboard
      </h1>
      <p className="text-gray-500">AI Planner Analytics</p>
    </div>
 
-   {/* STATS */}
-   <div className="grid md:grid-cols-4 gap-4">
+   {/* CARDS */}
+   <div className="grid md:grid-cols-4 gap-6">
 
-     <Card title="Jami vazifa" value={tasks.length}/>
-     <Card title="Bajarilgan" value={done} color="text-green-500"/>
-     <Card title="Bajarilmagan" value={active} color="text-red-500"/>
-     <Card 
-       title="Progress" 
-       value={`${tasks.length ? Math.round((done/tasks.length)*100) : 0}%`} 
-     />
+     <Card title="Jami" value={tasks.length} color="from-blue-500 to-indigo-500"/>
+     <Card title="Bajarilgan" value={done} color="from-green-400 to-green-600"/>
+     <Card title="Bajarilmagan" value={active} color="from-red-400 to-red-600"/>
+     <Card title="Progress" value={`${tasks.length ? Math.round((done/tasks.length)*100) : 0}%`} color="from-purple-400 to-purple-600"/>
 
    </div>
 
    {/* PROGRESS */}
-   <div className="bg-white p-5 rounded-2xl shadow">
-     <p className="mb-2 font-medium">Task progress</p>
+   <GlassCard title="Task progress">
+     <Progress percent={tasks.length ? (done/tasks.length)*100 : 0} color="bg-blue-500"/>
+     <p className="text-sm text-gray-500 mt-2">{done}/{tasks.length}</p>
+   </GlassCard>
 
-     <div className="w-full bg-gray-200 h-4 rounded-full">
-       <div
-         className="bg-blue-500 h-4"
-         style={{width:`${tasks.length ? (done/tasks.length)*100 : 0}%`}}
-       />
-     </div>
-
-     <p className="mt-2 text-sm text-gray-500">
-       {done} / {tasks.length}
-     </p>
-   </div>
-
-   {/* SUBTASK PROGRESS */}
-   <div className="bg-white p-5 rounded-2xl shadow">
-     <p className="mb-2 font-medium">Subtask progress</p>
-
-     <div className="w-full bg-gray-200 h-4 rounded-full">
-       <div
-         className="bg-green-500 h-4"
-         style={{width:`${subPercent}%`}}
-       />
-     </div>
-
-     <p className="mt-2 text-sm text-gray-500">
-       {doneSub} / {totalSub}
-     </p>
-   </div>
+   {/* SUBTASK */}
+   <GlassCard title="Subtask progress">
+     <Progress percent={subPercent} color="bg-green-500"/>
+     <p className="text-sm text-gray-500 mt-2">{doneSub}/{totalSub}</p>
+   </GlassCard>
 
    {/* CHARTS */}
    <div className="grid md:grid-cols-2 gap-6">
 
      {/* PIE */}
-     <div className="bg-white p-5 rounded-2xl shadow">
-       <h2 className="font-semibold mb-3">Priority taqsimoti</h2>
-
+     <GlassCard title="Priority taqsimoti">
        <ResponsiveContainer width="100%" height={250}>
          <PieChart>
            <Pie data={pieData} dataKey="value" outerRadius={80}>
-             {pieData.map((entry, index)=>(
-               <Cell key={index} fill={COLORS[index]} />
+             {pieData.map((_,i)=>(
+               <Cell key={i} fill={COLORS[i]} />
              ))}
            </Pie>
            <Tooltip/>
          </PieChart>
        </ResponsiveContainer>
-     </div>
+     </GlassCard>
 
      {/* CATEGORY */}
-     <div className="bg-white p-5 rounded-2xl shadow">
-       <h2 className="font-semibold mb-3">Kategoriya</h2>
-
+     <GlassCard title="Kategoriya">
        <ResponsiveContainer width="100%" height={250}>
          <BarChart data={categoryData}>
-           <CartesianGrid strokeDasharray="3 3"/>
-           <XAxis dataKey="name"/>
-           <YAxis/>
+           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb"/>
+           <XAxis dataKey="name" stroke="#6b7280"/>
+           <YAxis stroke="#6b7280"/>
            <Tooltip/>
-           <Bar dataKey="value" />
+           <Bar dataKey="value" fill="#3b82f6" radius={[6,6,0,0]}/>
          </BarChart>
        </ResponsiveContainer>
-     </div>
+     </GlassCard>
 
    </div>
 
    {/* ACTIVITY */}
-   <div className="bg-white p-5 rounded-2xl shadow">
-     <h2 className="font-semibold mb-3">Kunlik aktivlik</h2>
-
+   <GlassCard title="Kunlik aktivlik">
      <ResponsiveContainer width="100%" height={250}>
        <BarChart data={dateData}>
-         <CartesianGrid strokeDasharray="3 3"/>
-         <XAxis dataKey="date"/>
-         <YAxis/>
+         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb"/>
+         <XAxis dataKey="date" stroke="#6b7280"/>
+         <YAxis stroke="#6b7280"/>
          <Tooltip/>
-         <Bar dataKey="count"/>
+         <Bar dataKey="count" fill="#22c55e" radius={[6,6,0,0]}/>
        </BarChart>
      </ResponsiveContainer>
-   </div>
-
-   {/* CATEGORY LIST */}
-   <div className="bg-white p-5 rounded-2xl shadow">
-     <h2 className="font-semibold mb-3">📂 Kategoriyalar</h2>
-
-     <div className="space-y-2">
-       {Object.entries(categories).map(([cat,count])=>(
-         <div key={cat} className="flex justify-between border-b pb-1">
-           <span>{cat}</span>
-           <span className="font-semibold">{count}</span>
-         </div>
-       ))}
-     </div>
-   </div>
+   </GlassCard>
 
   </div>
  )
 }
 
-// 🔥 CARD COMPONENT
-function Card({title,value,color=""}){
+/* 💎 COMPONENTS */
+
+function Card({title,value,color}){
  return (
-  <div className="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition">
-    <p className="text-gray-500 text-sm">{title}</p>
-    <h2 className={`text-2xl font-bold ${color}`}>{value}</h2>
+  <div className={`p-6 rounded-2xl text-white shadow-lg bg-gradient-to-r ${color}`}>
+    <p className="text-sm opacity-80">{title}</p>
+    <h2 className="text-3xl font-bold">{value}</h2>
+  </div>
+ );
+}
+
+function GlassCard({title,children}){
+ return (
+  <div className="bg-white/70 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/40">
+    <h2 className="font-semibold mb-3">{title}</h2>
+    {children}
+  </div>
+ );
+}
+
+function Progress({percent,color}){
+ return (
+  <div className="w-full bg-gray-200 h-4 rounded-full overflow-hidden">
+    <div
+      className={`${color} h-4 transition-all`}
+      style={{width:`${percent}%`}}
+    />
   </div>
  );
 }
