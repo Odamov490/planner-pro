@@ -50,7 +50,7 @@ export default function Dashboard(){
   value
  }));
 
- // 🔥 DATE
+ // 🔥 DATE ACTIVITY
  const dateStats = {};
  tasks.forEach(t=>{
   if(!t.date) return;
@@ -70,32 +70,44 @@ export default function Dashboard(){
      <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
        📊 Dashboard
      </h1>
-     <p className="text-gray-500">AI Planner Analytics</p>
+     <p className="text-gray-500">Umumiy statistik ma’lumotlar</p>
    </div>
 
-   {/* CARDS */}
-   <div className="grid md:grid-cols-4 gap-6">
+   {/* 🔥 STATS CARDS */}
+   <div className="grid md:grid-cols-4 gap-4">
 
-     <Card title="Jami" value={tasks.length} color="from-blue-500 to-indigo-500"/>
-     <Card title="Bajarilgan" value={done} color="from-green-400 to-green-600"/>
-     <Card title="Bajarilmagan" value={active} color="from-red-400 to-red-600"/>
-     <Card title="Progress" value={`${tasks.length ? Math.round((done/tasks.length)*100) : 0}%`} color="from-purple-400 to-purple-600"/>
+     <StatCard title="Jami vazifalar" value={tasks.length}/>
+     <StatCard title="Bajarilgan" value={done} color="text-green-500"/>
+     <StatCard title="Bajarilmagan" value={active} color="text-red-500"/>
+     <StatCard 
+       title="Progress" 
+       value={`${tasks.length ? Math.round((done/tasks.length)*100) : 0}%`} 
+     />
 
    </div>
 
-   {/* PROGRESS */}
-   <GlassCard title="Task progress">
+   {/* 📊 PROGRESS BAR */}
+   <GlassCard title="Umumiy bajarilish">
      <Progress percent={tasks.length ? (done/tasks.length)*100 : 0} color="bg-blue-500"/>
-     <p className="text-sm text-gray-500 mt-2">{done}/{tasks.length}</p>
+     <p className="mt-2 text-sm text-gray-500">{done} / {tasks.length}</p>
    </GlassCard>
 
-   {/* SUBTASK */}
+   {/* 🔥 SUBTASK PROGRESS */}
    <GlassCard title="Subtask progress">
      <Progress percent={subPercent} color="bg-green-500"/>
-     <p className="text-sm text-gray-500 mt-2">{doneSub}/{totalSub}</p>
+     <p className="mt-2 text-sm text-gray-500">{doneSub} / {totalSub}</p>
    </GlassCard>
 
-   {/* CHARTS */}
+   {/* 🔥 PRIORITY CARDS */}
+   <div className="grid md:grid-cols-3 gap-4">
+
+     <StatCard title="🔴 Yuqori" value={high}/>
+     <StatCard title="🟡 O‘rta" value={medium}/>
+     <StatCard title="🟢 Past" value={low}/>
+
+   </div>
+
+   {/* 📊 CHARTS */}
    <div className="grid md:grid-cols-2 gap-6">
 
      {/* PIE */}
@@ -127,7 +139,7 @@ export default function Dashboard(){
 
    </div>
 
-   {/* ACTIVITY */}
+   {/* 🔥 ACTIVITY */}
    <GlassCard title="Kunlik aktivlik">
      <ResponsiveContainer width="100%" height={250}>
        <BarChart data={dateData}>
@@ -140,24 +152,42 @@ export default function Dashboard(){
      </ResponsiveContainer>
    </GlassCard>
 
+   {/* 🔥 CATEGORY LIST (ESKI KODING QAYTDI) */}
+   <GlassCard title="📂 Kategoriyalar">
+
+     {Object.keys(categories).length===0 && (
+       <p className="text-gray-400">Ma’lumot yo‘q</p>
+     )}
+
+     <div className="space-y-2">
+       {Object.entries(categories).map(([cat,count])=>(
+         <div key={cat} className="flex justify-between border-b pb-1">
+           <span>{cat}</span>
+           <span className="font-semibold">{count}</span>
+         </div>
+       ))}
+     </div>
+
+   </GlassCard>
+
   </div>
  )
 }
 
-/* 💎 COMPONENTS */
+/* COMPONENTS */
 
-function Card({title,value,color}){
+function StatCard({title,value,color=""}){
  return (
-  <div className={`p-6 rounded-2xl text-white shadow-lg bg-gradient-to-r ${color}`}>
-    <p className="text-sm opacity-80">{title}</p>
-    <h2 className="text-3xl font-bold">{value}</h2>
+  <div className="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition">
+    <p className="text-gray-500 text-sm">{title}</p>
+    <h2 className={`text-2xl font-bold ${color}`}>{value}</h2>
   </div>
  );
 }
 
 function GlassCard({title,children}){
  return (
-  <div className="bg-white/70 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/40">
+  <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/40">
     <h2 className="font-semibold mb-3">{title}</h2>
     {children}
   </div>
