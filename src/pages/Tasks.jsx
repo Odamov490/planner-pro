@@ -32,7 +32,7 @@ export default function Tasks(){
    editTask
  } = useContext(TaskContext);
 
- // 🔥 USERS FETCH
+ // 🔥 USERS
  useEffect(()=>{
   const unsub = onSnapshot(collection(db,"users"),(snap)=>{
     setUsers(snap.docs.map(d=>d.data()));
@@ -46,7 +46,6 @@ export default function Tasks(){
 
  // 🤖 AI
  useEffect(() => {
-
   if(input.length < 3){
     setSuggestion("");
     return;
@@ -58,10 +57,9 @@ export default function Tasks(){
   },400);
 
   return ()=>clearTimeout(t);
-
  }, [input]);
 
- // ➕ ADD (🔥 FIX QILINDI)
+ // ➕ ADD
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -78,7 +76,7 @@ export default function Tasks(){
       priority,
       category,
       selectedUser?.uid,
-      selectedUser?.email // 🔥 ENG MUHIM FIX
+      selectedUser?.email
     ))
   );
 
@@ -90,7 +88,6 @@ export default function Tasks(){
   setEmailInput("");
  };
 
- // ⌨️
  const handleKeyDown = (e) => {
 
   if(e.key==="Enter" && !e.shiftKey){
@@ -134,230 +131,142 @@ export default function Tasks(){
      Vazifalar
    </h1>
 
-   {/* USER ASSIGN */}
-   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border">
+   {/* 🔥 CONTROL CENTER */}
+   <div className="bg-white p-6 rounded-2xl shadow border space-y-5">
 
-     <p className="font-semibold mb-2">👤 Vazifani kimga berasiz?</p>
+     <div className="flex justify-between items-center border-b pb-3">
+       <h2 className="font-bold text-gray-700 text-lg">
+         ⚙️ Boshqaruv paneli
+       </h2>
+       <span className="text-xs text-gray-400">Smart</span>
+     </div>
 
+     {/* 👤 ASSIGN */}
+     <div>
+       <p className="text-sm text-gray-600 mb-1">
+         Kimga topshiriq berasiz
+       </p>
+
+       <div className="flex gap-2">
+         <input
+           value={emailInput}
+           onChange={(e)=>{
+             setEmailInput(e.target.value);
+             setSelectedUser(null);
+           }}
+           placeholder="Email yozing..."
+           className="w-full px-4 py-3 border rounded-lg"
+         />
+
+         <button
+           onClick={()=>setShowUsers(prev=>!prev)}
+           className="px-4 bg-black text-white rounded-lg"
+         >
+           Tanlash
+         </button>
+       </div>
+
+       {emailInput && (
+         <div className="border mt-2 rounded-lg max-h-40 overflow-y-auto">
+           {filteredUsers.map(u=>(
+             <div
+               key={u.uid}
+               onClick={()=>{
+                 setSelectedUser(u);
+                 setEmailInput(u.email);
+               }}
+               className="p-2 hover:bg-gray-100 cursor-pointer"
+             >
+               {u.email}
+             </div>
+           ))}
+         </div>
+       )}
+
+       {showUsers && (
+         <div className="border mt-2 rounded-lg max-h-40 overflow-y-auto">
+           {users.map(u=>(
+             <div
+               key={u.uid}
+               onClick={()=>{
+                 setSelectedUser(u);
+                 setEmailInput(u.email);
+                 setShowUsers(false);
+               }}
+               className="p-2 hover:bg-gray-100 cursor-pointer"
+             >
+               {u.email}
+             </div>
+           ))}
+         </div>
+       )}
+
+       {selectedUser && (
+         <p className="text-green-600 text-sm mt-1">
+           Tanlandi: {selectedUser.email}
+         </p>
+       )}
+     </div>
+
+     {/* 🔍 SEARCH */}
+     <input
+       value={search}
+       onChange={(e)=>setSearch(e.target.value)}
+       placeholder="🔍 Vazifa qidirish..."
+       className="w-full px-4 py-3 border rounded-lg"
+     />
+
+     {/* 📊 PROGRESS */}
+     <div>
+       <div className="w-full bg-gray-200 h-2 rounded-full">
+         <div 
+           className="bg-black h-2 rounded-full"
+           style={{width: percent+"%"}}
+         />
+       </div>
+       <p className="text-xs mt-1">{done}/{tasks.length}</p>
+     </div>
+
+     {/* FILTER */}
      <div className="flex gap-2">
-       <input
-         value={emailInput}
-         onChange={(e)=>{
-           setEmailInput(e.target.value);
-           setSelectedUser(null);
-         }}
-         placeholder="Email yozing..."
-         className="w-full p-3 border rounded-xl"
-       />
-
-       <button
-         onClick={()=>setShowUsers(prev=>!prev)}
-         className="px-3 bg-blue-500 text-white rounded-xl"
-       >
-         📋
-       </button>
+       <button onClick={()=>setFilter("all")} className="px-3 py-2 border rounded">Hammasi</button>
+       <button onClick={()=>setFilter("done")} className="px-3 py-2 border rounded">Bajarilgan</button>
+       <button onClick={()=>setFilter("active")} className="px-3 py-2 border rounded">Faol</button>
      </div>
-
-     {/* AUTOCOMPLETE */}
-     {emailInput && (
-       <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
-
-         {filteredUsers.map(u=>(
-           <div
-             key={u.uid}
-             onClick={()=>{
-               setSelectedUser(u);
-               setEmailInput(u.email);
-             }}
-             className="p-2 hover:bg-blue-100 cursor-pointer"
-           >
-             {u.email}
-           </div>
-         ))}
-
-       </div>
-     )}
-
-     {/* FULL LIST */}
-     {showUsers && (
-       <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
-
-         {users.map(u=>(
-           <div
-             key={u.uid}
-             onClick={()=>{
-               setSelectedUser(u);
-               setEmailInput(u.email);
-               setShowUsers(false);
-             }}
-             className="p-2 hover:bg-blue-100 cursor-pointer"
-           >
-             {u.email}
-           </div>
-         ))}
-
-       </div>
-     )}
-
-     {selectedUser && (
-       <div className="mt-2 bg-green-100 text-green-700 px-3 py-1 rounded-xl inline-block">
-         ✅ {selectedUser.email}
-       </div>
-     )}
 
    </div>
 
-   {/* SEARCH */}
-   <input
-     value={search}
-     onChange={(e)=>setSearch(e.target.value)}
-     placeholder="🔍 Qidirish..."
-     className="w-full p-3 rounded-xl border"
-   />
+   {/* ADD PANEL */}
+   <div className="bg-white p-5 rounded-2xl shadow border space-y-4">
 
-   {/* PROGRESS */}
-   <div>
-     <div className="w-full bg-gray-200 h-3 rounded-full">
-       <div 
-         className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3"
-         style={{width: percent+"%"}}
-       />
+     {/* DATE */}
+     <div className="flex justify-between items-center border-b pb-3">
+       <span className="text-sm text-gray-600">📅 Sana</span>
+       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)} className="border px-2 py-1 rounded"/>
      </div>
-     <p className="text-sm mt-1">{done}/{tasks.length}</p>
-   </div>
 
-   {/* FILTER */}
-   <select 
-     onChange={(e)=>setFilter(e.target.value)} 
-     className="p-2 border rounded-xl"
-   >
-     <option value="all">Hammasi</option>
-     <option value="done">Bajarilgan</option>
-     <option value="active">Bajarilmagan</option>
-   </select>
+     {/* PRIORITY */}
+     <div className="grid grid-cols-3 gap-2">
+       <button onClick={()=>setPriority("high")} className={`border p-2 ${priority==="high" && "bg-gray-200 font-bold"}`}>🔴 Yuqori</button>
+       <button onClick={()=>setPriority("medium")} className={`border p-2 ${priority==="medium" && "bg-gray-200 font-bold"}`}>🟡 O‘rta</button>
+       <button onClick={()=>setPriority("low")} className={`border p-2 ${priority==="low" && "bg-gray-200 font-bold"}`}>🟢 Past</button>
+     </div>
 
-   {/* ADD */}
-   <div className="bg-white p-6 rounded-2xl shadow space-y-3">
+     {/* CATEGORY */}
+     <div className="grid grid-cols-3 gap-2">
+       <button onClick={()=>setCategory("Ish")} className={`border p-2 ${category==="Ish" && "bg-gray-200 font-bold"}`}>💼 Ish</button>
+       <button onClick={()=>setCategory("O‘qish")} className={`border p-2 ${category==="O‘qish" && "bg-gray-200 font-bold"}`}>📚 O‘qish</button>
+       <button onClick={()=>setCategory("Shaxsiy")} className={`border p-2 ${category==="Shaxsiy" && "bg-gray-200 font-bold"}`}>🏠 Shaxsiy</button>
+     </div>
 
-    <div className="bg-white p-5 rounded-2xl shadow border space-y-4">
-
-  {/* 📅 DATE */}
-  <div className="flex items-center justify-between border-b pb-3">
-    <span className="text-sm font-medium text-gray-600">
-      📅 Vazifa sanasi
-    </span>
-
-    <input
-      type="date"
-      value={date}
-      onChange={(e)=>setDate(e.target.value)}
-      className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-    />
-  </div>
-
-  {/* ⚡ PRIORITY */}
-  <div className="space-y-2 border-b pb-3">
-    <p className="text-sm font-medium text-gray-600">
-      ⚡ Muhimlik darajasini tanlang
-    </p>
-
-    <div className="grid grid-cols-3 gap-2">
-
-      <button
-        onClick={()=>setPriority("high")}
-        className={`p-3 border text-sm transition
-          ${priority==="high"
-            ? "border-black bg-gray-100 font-semibold"
-            : "hover:bg-gray-50"}
-        `}
-      >
-        🔴 Yuqori
-        <p className="text-xs text-gray-400">Shoshilinch vazifa</p>
-      </button>
-
-      <button
-        onClick={()=>setPriority("medium")}
-        className={`p-3 border text-sm transition
-          ${priority==="medium"
-            ? "border-black bg-gray-100 font-semibold"
-            : "hover:bg-gray-50"}
-        `}
-      >
-        🟡 O‘rta
-        <p className="text-xs text-gray-400">Oddiy vazifa</p>
-      </button>
-
-      <button
-        onClick={()=>setPriority("low")}
-        className={`p-3 border text-sm transition
-          ${priority==="low"
-            ? "border-black bg-gray-100 font-semibold"
-            : "hover:bg-gray-50"}
-        `}
-      >
-        🟢 Past
-        <p className="text-xs text-gray-400">Keyin qilish mumkin</p>
-      </button>
-
-    </div>
-  </div>
-
-  {/* 📂 CATEGORY */}
-  <div className="space-y-2">
-    <p className="text-sm font-medium text-gray-600">
-      📂 Vazifa turi
-    </p>
-
-    <div className="grid grid-cols-3 gap-2">
-
-      <button
-        onClick={()=>setCategory("Ish")}
-        className={`p-3 border text-sm transition
-          ${category==="Ish"
-            ? "border-black bg-gray-100 font-semibold"
-            : "hover:bg-gray-50"}
-        `}
-      >
-        💼 Ish
-        <p className="text-xs text-gray-400">Ishga oid</p>
-      </button>
-
-      <button
-        onClick={()=>setCategory("O‘qish")}
-        className={`p-3 border text-sm transition
-          ${category==="O‘qish"
-            ? "border-black bg-gray-100 font-semibold"
-            : "hover:bg-gray-50"}
-        `}
-      >
-        📚 O‘qish
-        <p className="text-xs text-gray-400">Ta’lim / dars</p>
-      </button>
-
-      <button
-        onClick={()=>setCategory("Shaxsiy")}
-        className={`p-3 border text-sm transition
-          ${category==="Shaxsiy"
-            ? "border-black bg-gray-100 font-semibold"
-            : "hover:bg-gray-50"}
-        `}
-      >
-        🏠 Shaxsiy
-        <p className="text-xs text-gray-400">Kundalik ishlar</p>
-      </button>
-
-    </div>
-  </div>
-
-</div>
-
+     {/* INPUT */}
      {date && priority && category && (
        <>
          <textarea
            value={input}
            onChange={(e)=>setInput(e.target.value)}
            onKeyDown={handleKeyDown}
-           className="w-full p-3 border rounded-xl"
+           className="w-full p-3 border rounded"
            placeholder="✍️ Vazifa yozing..."
          />
 
@@ -369,9 +278,9 @@ export default function Tasks(){
 
          <button
            onClick={handleAdd}
-           className="w-full bg-blue-500 text-white py-3 rounded-xl"
+           className="w-full bg-blue-500 text-white py-3 rounded"
          >
-           ➕ Qo‘shish
+           Qo‘shish
          </button>
        </>
      )}
@@ -381,23 +290,17 @@ export default function Tasks(){
    {/* TASKS */}
    {sortedDates.map(date=>(
      <div key={date} className="bg-white p-4 rounded-2xl shadow">
+       <h2 className="font-bold text-blue-600 mb-2">📅 {date}</h2>
 
-       <h2 className="font-bold text-blue-600 mb-2">
-         📅 {date}
-       </h2>
-
-       <div className="space-y-2">
-         {groupedTasks[date].map(t=>(
-           <TaskCard
-             key={t.id}
-             task={t}
-             onToggle={toggleTask}
-             onDelete={deleteTask}
-             onEdit={editTask}
-           />
-         ))}
-       </div>
-
+       {groupedTasks[date].map(t=>(
+         <TaskCard
+           key={t.id}
+           task={t}
+           onToggle={toggleTask}
+           onDelete={deleteTask}
+           onEdit={editTask}
+         />
+       ))}
      </div>
    ))}
 
