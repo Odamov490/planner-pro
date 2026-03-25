@@ -65,18 +65,33 @@ export default function Tasks(){
   groupedTasks[d].push(t);
  });
 
- // 🔥 DATE SORT (eng yangi kun tepada)
- const sortedDates = Object.keys(groupedTasks)
-   .sort((a,b)=> new Date(b) - new Date(a));
+ // 🔥 BUGUN / ERTAGA LOGIC
+ const today = new Date();
+ const todayStr = today.toISOString().split("T")[0];
+
+ const tomorrow = new Date();
+ tomorrow.setDate(today.getDate() + 1);
+ const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+ // 🔥 SORT DATES (MUHIM)
+ const sortedDates = Object.keys(groupedTasks).sort((a, b) => {
+
+  if (a === todayStr) return -1;
+  if (b === todayStr) return 1;
+
+  if (a === tomorrowStr) return -1;
+  if (b === tomorrowStr) return 1;
+
+  return new Date(a) - new Date(b);
+ });
 
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
 
- const today = new Date().toISOString().split("T")[0];
-
  return (
   <div className="max-w-4xl mx-auto">
 
+   {/* TITLE */}
    <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
      Vazifalar
    </h1>
@@ -104,7 +119,10 @@ export default function Tasks(){
 
    {/* FILTER */}
    <div className="flex gap-2 mb-6">
-     <select onChange={(e)=>setFilter(e.target.value)} className="p-2 border rounded-xl">
+     <select 
+       onChange={(e)=>setFilter(e.target.value)} 
+       className="p-2 border rounded-xl"
+     >
        <option value="all">Hammasi</option>
        <option value="done">Bajarilgan</option>
        <option value="active">Bajarilmagan</option>
@@ -147,7 +165,6 @@ export default function Tasks(){
 
      </div>
 
-     {/* INPUT */}
      {date && priority && category && (
        <div className="space-y-3">
 
@@ -177,18 +194,31 @@ export default function Tasks(){
     {sortedDates.map(date=>(
       <div key={date} className="bg-white p-4 rounded-2xl shadow">
 
+        {/* HEADER */}
         <div className="flex justify-between mb-3 border-b pb-2">
-          <h2 className={`font-bold ${date===today ? "text-red-500" : "text-blue-600"}`}>
-            📅 {date} {date===today && "(Bugun)"}
+          <h2 className={`font-bold ${
+            date === todayStr
+              ? "text-red-500"
+              : date === tomorrowStr
+              ? "text-orange-500"
+              : "text-blue-600"
+          }`}>
+            📅 {date === todayStr 
+                ? "Bugun" 
+                : date === tomorrowStr 
+                ? "Ertaga" 
+                : date}
           </h2>
+
           <span className="text-sm text-gray-400">
             {groupedTasks[date].length} ta
           </span>
         </div>
 
+        {/* TASKS */}
         <div className="space-y-3">
           {groupedTasks[date]
-            .sort((a,b)=> new Date(b.created) - new Date(a.created)) // 🔥 ENG YANGI TEPADA
+            .sort((a,b)=> new Date(b.created) - new Date(a.created))
             .map(t=>(
               <TaskCard 
                 key={t.id} 
