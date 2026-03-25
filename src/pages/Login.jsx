@@ -1,88 +1,45 @@
-import { useState, useContext } from "react";
+import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
 export default function Login(){
 
-  const { login, register, loginWithGoogle } = useContext(AuthContext);
-
-  const [email,setEmail]=useState("");
-  const [password,setPassword]=useState("");
-
-  const handleRegister = async () => {
-    if(!email || !password){
-      alert("Email va password kiriting");
-      return;
-    }
-
-    try {
-      await register(email,password);
-      alert("Ro‘yxatdan o‘tdingiz ✅");
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const handleLogin = async () => {
-    if(!email || !password){
-      alert("Email va password kiriting");
-      return;
-    }
-
-    try {
-      await login(email,password);
-    } catch (err) {
-      alert(err.message);
-    }
-  };
+  const { loginWithGoogle } = useContext(AuthContext);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-100 to-indigo-200">
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-100 via-indigo-200 to-purple-200">
 
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-80 space-y-4">
+      <div className="bg-white/80 backdrop-blur-lg p-10 rounded-3xl shadow-2xl w-96 text-center space-y-6">
 
-        <h1 className="text-2xl font-bold text-center text-blue-600">
-          🔐 Login
+        {/* LOGO */}
+        <div className="text-4xl">📘</div>
+
+        {/* TITLE */}
+        <h1 className="text-3xl font-extrabold text-gray-800">
+          Planner Pro
         </h1>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e)=>setEmail(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
+        <p className="text-gray-500 text-sm">
+          Vazifalaringni boshqarishni boshlang
+        </p>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e)=>setPassword(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-
+        {/* GOOGLE BUTTON */}
         <button
-          type="button"
-          onClick={handleLogin}
-          className="w-full bg-blue-500 text-white py-2 rounded"
-        >
-          Login
-        </button>
-
-        <button
-          type="button"
-          onClick={handleRegister}
-          className="w-full bg-green-500 text-white py-2 rounded"
-        >
-          Register
-        </button>
-
-        <button
-          type="button"
           onClick={loginWithGoogle}
-          className="w-full bg-red-500 text-white py-2 rounded"
+          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 py-3 rounded-xl shadow hover:shadow-lg hover:scale-105 transition"
         >
-          🔴 Google orqali kirish
+          <img 
+            src="https://www.svgrepo.com/show/475656/google-color.svg" 
+            className="w-5 h-5"
+          />
+          <span className="font-medium text-gray-700">
+            Google orqali kirish
+          </span>
         </button>
+
+        {/* FOOTER */}
+        <p className="text-xs text-gray-400 mt-4">
+          🔐 Xavfsiz kirish Google orqali
+        </p>
 
       </div>
 
