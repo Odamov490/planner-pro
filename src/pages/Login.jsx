@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -6,42 +7,40 @@ export default function Login(){
   const { loginWithGoogle } = useContext(AuthContext);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-100 via-indigo-200 to-purple-200">
+    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 relative overflow-hidden">
 
-      <div className="bg-white/80 backdrop-blur-lg p-10 rounded-3xl shadow-2xl w-96 text-center space-y-6">
+      {/* 🔥 BACKGROUND SHAPES */}
+      <div className="absolute w-96 h-96 bg-purple-400 opacity-30 rounded-full blur-3xl top-10 left-10 animate-pulse"></div>
+      <div className="absolute w-96 h-96 bg-blue-400 opacity-30 rounded-full blur-3xl bottom-10 right-10 animate-pulse"></div>
 
-        {/* LOGO */}
-        <div className="text-4xl">📘</div>
+      {/* 🔥 CARD */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8, y: 50 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-10 w-[420px] text-white text-center"
+      >
 
-        {/* TITLE */}
-        <h1 className="text-3xl font-extrabold text-gray-800">
-          Planner Pro
-        </h1>
-
-        <p className="text-gray-500 text-sm">
-          Vazifalaringni boshqarishni boshlang
+        <h1 className="text-3xl font-bold mb-3">🚀 Planner Pro</h1>
+        <p className="text-sm text-gray-200 mb-6">
+          Vazifalaringni professional boshqar
         </p>
 
         {/* GOOGLE BUTTON */}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={loginWithGoogle}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 py-3 rounded-xl shadow hover:shadow-lg hover:scale-105 transition"
+          className="w-full flex items-center justify-center gap-3 bg-white text-black py-3 rounded-xl shadow-lg"
         >
           <img 
             src="https://www.svgrepo.com/show/475656/google-color.svg" 
             className="w-5 h-5"
           />
-          <span className="font-medium text-gray-700">
-            Google orqali kirish
-          </span>
-        </button>
+          Google orqali kirish
+        </motion.button>
 
-        {/* FOOTER */}
-        <p className="text-xs text-gray-400 mt-4">
-          🔐 Xavfsiz kirish Google orqali
-        </p>
-
-      </div>
+      </motion.div>
 
     </div>
   );
