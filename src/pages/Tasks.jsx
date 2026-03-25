@@ -5,7 +5,7 @@ import { notify } from "../utils/notify";
 
 export default function Tasks(){
 
- const [title,setTitle]=useState("");
+ const [input,setInput]=useState("");
  const [date,setDate]=useState("");
 
  const [search,setSearch]=useState("");
@@ -13,40 +13,24 @@ export default function Tasks(){
  const [priority,setPriority]=useState("");
  const [category,setCategory]=useState("");
 
- const [bulkText,setBulkText]=useState("");
-
  const {
    tasks,
    addTask,
    toggleTask,
    deleteTask,
    editTask,
-   addSubtask,       // 🔥 NEW
-   toggleSubtask     // 🔥 NEW
+   addSubtask,
+   toggleSubtask
  } = useContext(TaskContext);
 
- // ➕ SINGLE ADD
- const handleAdd=()=>{
-  if(!title) return notify("Vazifa nomini kiriting ❗");
+ // 🔥 SMART ADD (ENTER + MULTI)
+ const handleAdd = async () => {
+
+  if(!input.trim()) return notify("Vazifa yozing ❗");
   if(!category) return notify("Kategoriya tanlang ❗");
-  if(!priority) return notify("Muhimlik darajasini tanlang ❗");
+  if(!priority) return notify("Muhimlik tanlang ❗");
 
-  addTask(title,date,priority,category);
-  notify("Yangi vazifa qo‘shildi ✅");
-
-  setTitle(""); 
-  setDate("");
-  setPriority("");
-  setCategory("");
- };
-
- // 🚀 BULK ADD
- const handleBulkAdd = async () => {
-  if (!bulkText) return notify("Tasklarni kiriting ❗");
-  if (!category) return notify("Kategoriya tanlang ❗");
-  if (!priority) return notify("Muhimlik tanlang ❗");
-
-  const lines = bulkText
+  const lines = input
     .split(/\r?\n/)
     .map(l => l.trim())
     .filter(l => l !== "");
@@ -56,7 +40,19 @@ export default function Tasks(){
   );
 
   notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
-  setBulkText("");
+
+  setInput("");
+  setDate("");
+  setPriority("");
+  setCategory("");
+ };
+
+ // 🔥 ENTER BOSILGANDA
+ const handleKeyDown = (e) => {
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    handleAdd();
+  }
  };
 
  // 🔍 FILTER
@@ -72,7 +68,7 @@ export default function Tasks(){
     return true;
   });
 
- // 📅 GROUP BY DATE
+ // 📅 GROUP
  const groupedTasks = {};
  filteredTasks.forEach(t=>{
   const d = t.date || "Sanasiz";
@@ -82,7 +78,6 @@ export default function Tasks(){
 
  const sortedDates = Object.keys(groupedTasks).sort();
 
- // 📊 PROGRESS
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
 
@@ -95,7 +90,7 @@ export default function Tasks(){
      Vazifalar
    </h1>
 
-   {/* 🔍 SEARCH */}
+   {/* SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
@@ -103,11 +98,11 @@ export default function Tasks(){
      className="w-full p-3 rounded-xl border mb-4"
    />
 
-   {/* 📊 PROGRESS */}
+   {/* PROGRESS */}
    <div className="mb-6">
      <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
-         className="bg-blue-500 h-3 rounded-full transition-all"
+         className="bg-blue-500 h-3 rounded-full"
          style={{width: percent + "%"}}
        ></div>
      </div>
@@ -116,7 +111,7 @@ export default function Tasks(){
      </p>
    </div>
 
-   {/* 🎯 FILTER */}
+   {/* FILTER */}
    <div className="flex gap-2 mb-6 flex-wrap">
 
      <select onChange={(e)=>setFilter(e.target.value)} className="p-2 border rounded">
@@ -134,14 +129,18 @@ export default function Tasks(){
 
    </div>
 
-   {/* ➕ ADD */}
+   {/* 🔥 SMART INPUT */}
    <div className="bg-white p-4 rounded-xl shadow mb-6 space-y-3">
 
-     <input 
-       className="w-full p-3 border rounded-xl"
-       value={title}
-       onChange={e=>setTitle(e.target.value)}
-       placeholder="✍️ Vazifa yozing..."
+     <textarea
+       value={input}
+       onChange={(e)=>setInput(e.target.value)}
+       onKeyDown={handleKeyDown}
+       placeholder={`✍️ Vazifa yozing...
+
+Shift + Enter → yangi qator
+Enter → qo‘shish`}
+       className="w-full p-3 border rounded-xl min-h-[120px]"
      />
 
      <div className="flex gap-2 flex-wrap">
@@ -171,32 +170,14 @@ export default function Tasks(){
 
      <button 
        onClick={handleAdd}
-       className="w-full bg-blue-500 text-white py-3 rounded-xl hover:scale-105 transition"
+       className="w-full bg-blue-500 text-white py-3 rounded-xl"
      >
        ➕ Qo‘shish
      </button>
 
    </div>
 
-   {/* 🔥 BULK */}
-   <div className="bg-white p-4 rounded-xl shadow mb-6">
-     <h2 className="font-semibold mb-2">🔥 Bir nechta vazifa qo‘shish</h2>
-
-     <textarea
-       value={bulkText}
-       onChange={(e)=>setBulkText(e.target.value)}
-       className="w-full p-2 border rounded mb-3 h-32"
-     />
-
-     <button
-       onClick={handleBulkAdd}
-       className="bg-green-500 text-white px-4 py-2 rounded"
-     >
-       🚀 Hammasini qo‘shish
-     </button>
-   </div>
-
-   {/* 📋 GROUPED TASKS */}
+   {/* TASK LIST */}
    <div className="space-y-6">
 
     {sortedDates.map(date=>(
