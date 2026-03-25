@@ -19,46 +19,74 @@ export function TaskProvider({ children }) {
 
   useEffect(() => {
 
-    let unsubscribeTasks = null;
+    let unsubIncoming = null;
+    let unsubOutgoing = null;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
 
-      // ❌ logout bo‘lsa
+      // ❌ logout
       if (!user) {
         setTasks([]);
-        if (unsubscribeTasks) unsubscribeTasks();
+        if (unsubIncoming) unsubIncoming();
+        if (unsubOutgoing) unsubOutgoing();
         return;
       }
 
-      // 🔥 YANGI QUERY (assignedTo)
-      const q = query(
+      // 🔵 MENGA BERILGAN
+      const qIncoming = query(
         collection(db, "tasks"),
         where("assignedTo", "==", user.uid)
       );
 
-      // eski listenerni tozalash
-      if (unsubscribeTasks) unsubscribeTasks();
+      // 🟡 MEN BERGAN
+      const qOutgoing = query(
+        collection(db, "tasks"),
+        where("userId", "==", user.uid)
+      );
 
-      unsubscribeTasks = onSnapshot(q, (snapshot) => {
+      // eski listenerlarni tozalash
+      if (unsubIncoming) unsubIncoming();
+      if (unsubOutgoing) unsubOutgoing();
 
-        const data = snapshot.docs.map(doc => ({
+      // 📥 incoming
+      unsubIncoming = onSnapshot(qIncoming, (snapshot) => {
+        const dataIncoming = snapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          type: "incoming"
         }));
 
-        setTasks(data);
+        setTasks(prev => {
+          const outgoing = prev.filter(t => t.type === "outgoing");
+          return [...outgoing, ...dataIncoming];
+        });
+      });
+
+      // 📤 outgoing
+      unsubOutgoing = onSnapshot(qOutgoing, (snapshot) => {
+        const dataOutgoing = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          type: "outgoing"
+        }));
+
+        setTasks(prev => {
+          const incoming = prev.filter(t => t.type === "incoming");
+          return [...incoming, ...dataOutgoing];
+        });
       });
 
     });
 
     return () => {
       unsubscribeAuth();
-      if (unsubscribeTasks) unsubscribeTasks();
+      if (unsubIncoming) unsubIncoming();
+      if (unsubOutgoing) unsubOutgoing();
     };
 
   }, []);
 
-  // ➕ ADD TASK (ASSIGN QO‘SHILDI)
+  // ➕ ADD TASK
   const addTask = async (title, date, priority, category, assignedUser=null) => {
 
     if (!title) return;
@@ -74,7 +102,9 @@ export function TaskProvider({ children }) {
       completed: false,
 
       userId: user.uid, // kim yaratdi
-      assignedTo: assignedUser || user.uid, // 🔥 kimga berildi
+      createdByEmail: user.email, // 🔥 kim berdi
+
+      assignedTo: assignedUser || user.uid, // kimga berildi
 
       subtasks: [],
       created: new Date()

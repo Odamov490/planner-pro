@@ -15,6 +15,11 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
   const [editingSubId, setEditingSubId] = useState(null);
   const [editingSubText, setEditingSubText] = useState("");
 
+  // 📊 SUBTASK PROGRESS
+  const totalSub = task.subtasks?.length || 0;
+  const doneSub = task.subtasks?.filter(s => s.completed).length || 0;
+  const percent = totalSub ? Math.round((doneSub / totalSub) * 100) : 0;
+
   // MAIN EDIT
   const handleSave = async () => {
     if (!newTitle.trim()) return;
@@ -22,27 +27,58 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
     setIsEditing(false);
   };
 
-  // ADD SUBTASK
+  // ADD SUB
   const handleAddSub = async () => {
     if (!subText.trim()) return;
     await addSubtask(task.id, subText);
     setSubText("");
-    setShowSubInput(false); // 🔥 yopiladi
+    setShowSubInput(false);
   };
 
-  // SAVE SUB EDIT
   const handleSaveSub = async (subId) => {
     await editSubtask(task.id, subId, editingSubText);
     setEditingSubId(null);
   };
 
   return (
-    <motion.div className="bg-white p-4 rounded-xl shadow space-y-3">
+    <motion.div
+      whileHover={{ scale: 1.01 }}
+      className="bg-white/80 backdrop-blur p-4 rounded-2xl shadow-md space-y-3 border"
+    >
+
+      {/* 🔥 HEADER */}
+      <div className="flex justify-between items-center text-xs">
+
+        {/* TYPE */}
+        <span className={`px-2 py-1 rounded-full text-white ${
+          task.type === "incoming" ? "bg-green-500" : "bg-blue-500"
+        }`}>
+          {task.type === "incoming" ? "📥 Incoming" : "📤 Outgoing"}
+        </span>
+
+        {/* PRIORITY */}
+        <span>
+          {task.priority === "high" && "🔴"}
+          {task.priority === "medium" && "🟡"}
+          {task.priority === "low" && "🟢"}
+        </span>
+
+      </div>
+
+      {/* 👤 WHO CREATED */}
+      {task.createdByEmail && (
+        <p className="text-xs text-gray-400">
+          👤 {task.type === "incoming"
+            ? task.createdByEmail
+            : "Siz berdingiz"}
+        </p>
+      )}
 
       {/* MAIN TASK */}
       <div className="flex justify-between items-center">
 
         <div className="flex items-center gap-3 w-full">
+
           <input
             type="checkbox"
             checked={task.completed}
@@ -56,39 +92,56 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
               className="border p-1 rounded w-full"
             />
           ) : (
-            <span className={`w-full ${task.completed ? "line-through text-gray-400" : ""}`}>
+            <span className={`w-full font-medium ${
+              task.completed ? "line-through text-gray-400" : ""
+            }`}>
               {task.title}
             </span>
           )}
+
         </div>
 
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2">
 
-          {/* ➕ SUBTASK BUTTON */}
           <button
             onClick={() => setShowSubInput(!showSubInput)}
-            className="text-green-600 font-bold text-lg"
+            className="text-green-600 text-lg"
           >
             +
           </button>
 
           {isEditing ? (
             <button onClick={handleSave} className="text-green-500">
-              Saqlash
+              ✔
             </button>
           ) : (
             <button onClick={() => setIsEditing(true)} className="text-blue-500">
-              Edit
+              ✏️
             </button>
           )}
 
           <button onClick={() => onDelete(task.id)} className="text-red-500">
-            O‘chirish
+            ❌
           </button>
 
         </div>
 
       </div>
+
+      {/* 📊 SUBTASK PROGRESS */}
+      {totalSub > 0 && (
+        <div>
+          <div className="w-full bg-gray-200 h-2 rounded-full">
+            <div
+              className="bg-green-500 h-2 rounded-full"
+              style={{ width: percent + "%" }}
+            />
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {doneSub}/{totalSub} ({percent}%)
+          </p>
+        </div>
+      )}
 
       {/* 🔥 SUBTASK LIST */}
       <div className="pl-6 space-y-2">
@@ -109,7 +162,9 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
                 className="border p-1 rounded w-full"
               />
             ) : (
-              <span className={`w-full ${sub.completed ? "line-through text-gray-400" : ""}`}>
+              <span className={`w-full ${
+                sub.completed ? "line-through text-gray-400" : ""
+              }`}>
                 {sub.text}
               </span>
             )}
@@ -117,10 +172,7 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
             <div className="flex gap-2">
 
               {editingSubId === sub.id ? (
-                <button
-                  onClick={() => handleSaveSub(sub.id)}
-                  className="text-green-500"
-                >
+                <button onClick={() => handleSaveSub(sub.id)} className="text-green-500">
                   ✔
                 </button>
               ) : (
@@ -147,7 +199,7 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
           </div>
         ))}
 
-        {/* ➕ INPUT (faqat tugma bosilganda chiqadi) */}
+        {/* ➕ ADD SUB */}
         {showSubInput && (
           <div className="flex gap-2">
             <input
@@ -156,10 +208,7 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
               placeholder="Sub vazifa..."
               className="border p-1 rounded w-full text-sm"
             />
-            <button
-              onClick={handleAddSub}
-              className="text-green-500"
-            >
+            <button onClick={handleAddSub} className="text-green-500">
               ✔
             </button>
           </div>

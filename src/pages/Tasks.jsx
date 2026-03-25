@@ -19,10 +19,10 @@ export default function Tasks(){
  const [search,setSearch]=useState("");
  const [filter,setFilter]=useState("all");
 
- // 🔥 NEW (USER ASSIGN)
  const [users,setUsers]=useState([]);
  const [emailInput,setEmailInput]=useState("");
  const [selectedUser,setSelectedUser]=useState(null);
+ const [showUsers,setShowUsers]=useState(false);
 
  const {
    tasks,
@@ -44,7 +44,7 @@ export default function Tasks(){
   u.email?.toLowerCase().includes(emailInput.toLowerCase())
  );
 
- // 🔥 AI AUTO SUGGEST
+ // 🤖 AI
  useEffect(() => {
 
   if(input.length < 3){
@@ -52,18 +52,16 @@ export default function Tasks(){
     return;
   }
 
-  const timeout = setTimeout(async () => {
-
+  const t = setTimeout(async()=>{
     const res = await getSuggestion(input);
     setSuggestion(res);
+  },400);
 
-  }, 500);
-
-  return () => clearTimeout(timeout);
+  return ()=>clearTimeout(t);
 
  }, [input]);
 
- // 🔥 ADD
+ // ➕ ADD
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -79,7 +77,7 @@ export default function Tasks(){
       date,
       priority,
       category,
-      selectedUser?.uid // 🔥 ASSIGN
+      selectedUser?.uid
     ))
   );
 
@@ -87,17 +85,19 @@ export default function Tasks(){
 
   setInput("");
   setSuggestion("");
+  setSelectedUser(null);
+  setEmailInput("");
  };
 
- // 🔥 ENTER + TAB
+ // ⌨️
  const handleKeyDown = (e) => {
 
-  if(e.key === "Enter" && !e.shiftKey){
+  if(e.key==="Enter" && !e.shiftKey){
     e.preventDefault();
     handleAdd();
   }
 
-  if(e.key === "Tab" && suggestion){
+  if(e.key==="Tab" && suggestion){
     e.preventDefault();
     setInput(suggestion);
     setSuggestion("");
@@ -121,35 +121,43 @@ export default function Tasks(){
   groupedTasks[d].push(t);
  });
 
- const today = new Date().toISOString().split("T")[0];
-
  const sortedDates = Object.keys(groupedTasks).sort();
 
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
 
  return (
-  <div className="max-w-4xl mx-auto">
+  <div className="max-w-4xl mx-auto space-y-6">
 
-   <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
+   <h1 className="text-3xl font-extrabold text-blue-600">
      Vazifalar
    </h1>
 
-   {/* 🔥 USER ASSIGN UI */}
-   <div className="bg-blue-50 p-4 rounded-2xl border mb-4">
+   {/* 👤 USER ASSIGN */}
+   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border">
 
      <p className="font-semibold mb-2">👤 Vazifani kimga berasiz?</p>
 
-     <input
-       value={emailInput}
-       onChange={(e)=>{
-         setEmailInput(e.target.value);
-         setSelectedUser(null);
-       }}
-       placeholder="Email yozing..."
-       className="w-full p-3 border rounded-xl"
-     />
+     <div className="flex gap-2">
+       <input
+         value={emailInput}
+         onChange={(e)=>{
+           setEmailInput(e.target.value);
+           setSelectedUser(null);
+         }}
+         placeholder="Email yozing..."
+         className="w-full p-3 border rounded-xl"
+       />
 
+       <button
+         onClick={()=>setShowUsers(prev=>!prev)}
+         className="px-3 bg-blue-500 text-white rounded-xl"
+       >
+         📋
+       </button>
+     </div>
+
+     {/* 🔍 AUTOCOMPLETE */}
      {emailInput && (
        <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
 
@@ -169,60 +177,81 @@ export default function Tasks(){
        </div>
      )}
 
+     {/* 📋 FULL LIST */}
+     {showUsers && (
+       <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
+
+         {users.map(u=>(
+           <div
+             key={u.uid}
+             onClick={()=>{
+               setSelectedUser(u);
+               setEmailInput(u.email);
+               setShowUsers(false);
+             }}
+             className="p-2 hover:bg-blue-100 cursor-pointer"
+           >
+             {u.email}
+           </div>
+         ))}
+
+       </div>
+     )}
+
+     {/* ✅ SELECTED */}
      {selectedUser && (
-       <p className="text-green-600 mt-2">
-         ✅ Tanlandi: {selectedUser.email}
-       </p>
+       <div className="mt-2 bg-green-100 text-green-700 px-3 py-1 rounded-xl inline-block">
+         ✅ {selectedUser.email}
+       </div>
      )}
 
    </div>
 
+   {/* 🔍 SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
      placeholder="🔍 Qidirish..."
-     className="w-full p-3 rounded-xl border mb-4"
+     className="w-full p-3 rounded-xl border"
    />
 
-   <div className="mb-6">
+   {/* 📊 PROGRESS */}
+   <div>
      <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
-         className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 rounded-full"
-         style={{width: percent + "%"}}
-       ></div>
+         className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3"
+         style={{width: percent+"%"}}
+       />
      </div>
-     <p className="text-sm mt-1">
-       {done} / {tasks.length} bajarildi
-     </p>
+     <p className="text-sm mt-1">{done}/{tasks.length}</p>
    </div>
 
-   <div className="flex gap-2 mb-6">
-     <select 
-       onChange={(e)=>setFilter(e.target.value)} 
-       className="p-2 border rounded-xl"
-     >
-       <option value="all">Hammasi</option>
-       <option value="done">Bajarilgan</option>
-       <option value="active">Bajarilmagan</option>
-     </select>
-   </div>
+   {/* FILTER */}
+   <select 
+     onChange={(e)=>setFilter(e.target.value)} 
+     className="p-2 border rounded-xl"
+   >
+     <option value="all">Hammasi</option>
+     <option value="done">Bajarilgan</option>
+     <option value="active">Bajarilmagan</option>
+   </select>
 
-   {/* ADD BLOCK */}
-   <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 space-y-4">
+   {/* ADD */}
+   <div className="bg-white p-6 rounded-2xl shadow space-y-3">
 
-     <div className="flex gap-3 flex-wrap">
+     <div className="flex gap-2 flex-wrap">
 
-       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)} className="p-3 border rounded-xl"/>
+       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)} className="p-2 border rounded-xl"/>
 
-       <select value={priority} onChange={(e)=>setPriority(e.target.value)} className="p-3 border rounded-xl">
-         <option value="">Muhimlik *</option>
-         <option value="high">🔴 Yuqori</option>
-         <option value="medium">🟡 O‘rta</option>
-         <option value="low">🟢 Past</option>
+       <select value={priority} onChange={(e)=>setPriority(e.target.value)} className="p-2 border rounded-xl">
+         <option value="">Muhimlik</option>
+         <option value="high">🔴</option>
+         <option value="medium">🟡</option>
+         <option value="low">🟢</option>
        </select>
 
-       <select value={category} onChange={(e)=>setCategory(e.target.value)} className="p-3 border rounded-xl">
-         <option value="">Kategoriya *</option>
+       <select value={category} onChange={(e)=>setCategory(e.target.value)} className="p-2 border rounded-xl">
+         <option value="">Kategoriya</option>
          <option>Ish</option>
          <option>O‘qish</option>
          <option>Shaxsiy</option>
@@ -231,61 +260,64 @@ export default function Tasks(){
      </div>
 
      {date && priority && category && (
-       <div className="space-y-2">
-
+       <>
          <textarea
            value={input}
            onChange={(e)=>setInput(e.target.value)}
            onKeyDown={handleKeyDown}
+           className="w-full p-3 border rounded-xl"
            placeholder="✍️ Vazifa yozing..."
-           className="w-full p-4 border rounded-xl min-h-[120px]"
          />
 
          {suggestion && (
-           <div className="text-gray-400 text-sm px-2">
-             🤖 {suggestion} (Tab)
+           <div className="text-gray-400 text-sm">
+             🤖 {suggestion}
            </div>
          )}
 
          <button
            onClick={handleAdd}
-           className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl"
+           className="w-full bg-blue-500 text-white py-3 rounded-xl"
          >
            ➕ Qo‘shish
          </button>
-
-       </div>
+       </>
      )}
 
    </div>
 
-   {/* TASK LIST */}
-   <div className="space-y-6">
+   {/* TASKS */}
+   {sortedDates.map(date=>(
+     <div key={date} className="bg-white p-4 rounded-2xl shadow">
 
-    {sortedDates.map(date=>(
-      <div key={date} className="bg-white p-4 rounded-2xl shadow">
+       <h2 className="font-bold text-blue-600 mb-2">
+         📅 {date}
+       </h2>
 
-        <div className="flex justify-between mb-3 border-b pb-2">
-          <h2 className="font-bold text-blue-600">📅 {date}</h2>
-          <span className="text-sm text-gray-400">{groupedTasks[date].length} ta</span>
-        </div>
+       <div className="space-y-2">
+         {groupedTasks[date].map(t=>(
+           <div key={t.id}>
 
-        <div className="space-y-3">
-          {groupedTasks[date].map(t=>(
-            <TaskCard 
-              key={t.id} 
-              task={t} 
-              onToggle={toggleTask} 
-              onDelete={deleteTask}
-              onEdit={editTask}
-            />
-          ))}
-        </div>
+             {/* 🔥 LABEL */}
+             <div className="text-xs mb-1 text-gray-400">
+               {t.type==="incoming"
+                 ? `📥 ${t.createdByEmail}`
+                 : "📤 Siz berdingiz"}
+             </div>
 
-      </div>
-    ))}
+             <TaskCard
+               task={t}
+               onToggle={toggleTask}
+               onDelete={deleteTask}
+               onEdit={editTask}
+             />
 
-   </div>
+           </div>
+         ))}
+       </div>
+
+     </div>
+   ))}
 
   </div>
  )
