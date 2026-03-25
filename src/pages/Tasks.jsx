@@ -124,136 +124,153 @@ export default function Tasks(){
 
  const sortedDates = Object.keys(groupedTasks).sort();
 
- const done = tasks.filter(t => t.completed).length;
- const percent = tasks.length ? (done / tasks.length) * 100 : 0;
+    const done = tasks.filter(t => t.completed).length;
+    const percent = tasks.length ? (done / tasks.length) * 100 : 0;
 
- return (
-  <div className="max-w-4xl mx-auto space-y-6">
+   return (
+   <div className="max-w-4xl mx-auto space-y-6">
 
    <h1 className="text-3xl font-extrabold text-blue-600">
      Vazifalar
    </h1>
 
-   {/* USER ASSIGN */}
-   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border">
+   {/* 🔥 SMART CONTROL PANEL */}
+<div className="bg-white p-6 rounded-2xl shadow border space-y-6">
 
-     <p className="font-semibold mb-2">👤 Vazifani kimga berasiz?</p>
+  {/* HEADER */}
+  <div className="flex justify-between items-center border-b pb-3">
+    <h2 className="text-lg font-bold text-gray-700">
+      ⚙️ Boshqaruv paneli
+    </h2>
 
-     <div className="flex gap-2">
-       <input
-         value={emailInput}
-         onChange={(e)=>{
-           setEmailInput(e.target.value);
-           setSelectedUser(null);
-         }}
-         placeholder="Email yozing..."
-         className="w-full p-3 border rounded-xl"
-       />
+    {/* FILTER */}
+    <select 
+      value={filter}
+      onChange={(e)=>setFilter(e.target.value)} 
+      className="px-3 py-2 border rounded-lg text-sm bg-gray-50 hover:bg-white transition"
+    >
+      <option value="all">Hammasi</option>
+      <option value="done">Bajarilgan</option>
+      <option value="active">Faol</option>
+    </select>
+  </div>
 
-       <button
-         onClick={()=>setShowUsers(prev=>!prev)}
-         className="px-3 bg-blue-500 text-white rounded-xl"
-       >
-         📋
-       </button>
-     </div>
+  {/* 👤 ASSIGN + DATE */}
+  <div className="grid md:grid-cols-2 gap-4">
 
-     {/* AUTOCOMPLETE */}
-     {emailInput && (
-       <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
+    {/* ASSIGN */}
+    <div>
+      <p className="text-sm text-gray-500 mb-1">
+        👤 Kimga topshiriq berasiz
+      </p>
 
-         {filteredUsers.map(u=>(
-           <div
-             key={u.uid}
-             onClick={()=>{
-               setSelectedUser(u);
-               setEmailInput(u.email);
-             }}
-             className="p-2 hover:bg-blue-100 cursor-pointer"
-           >
-             {u.email}
-           </div>
-         ))}
+      <div className="flex gap-2">
+        <input
+          value={emailInput}
+          onChange={(e)=>{
+            setEmailInput(e.target.value);
+            setSelectedUser(null);
+          }}
+          placeholder="Email yozing..."
+          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+        />
 
-       </div>
-     )}
+        <button
+          onClick={()=>setShowUsers(prev=>!prev)}
+          className="px-4 bg-black text-white rounded-lg hover:opacity-80 transition"
+        >
+          Tanlash
+        </button>
+      </div>
 
-     {/* FULL LIST */}
-     {showUsers && (
-       <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
+      {/* AUTOCOMPLETE */}
+      {emailInput && (
+        <div className="bg-white border mt-2 rounded-lg max-h-40 overflow-y-auto shadow">
+          {filteredUsers.map(u=>(
+            <div
+              key={u.uid}
+              onClick={()=>{
+                setSelectedUser(u);
+                setEmailInput(u.email);
+              }}
+              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+            >
+              {u.email}
+            </div>
+          ))}
+        </div>
+      )}
 
-         {users.map(u=>(
-           <div
-             key={u.uid}
-             onClick={()=>{
-               setSelectedUser(u);
-               setEmailInput(u.email);
-               setShowUsers(false);
-             }}
-             className="p-2 hover:bg-blue-100 cursor-pointer"
-           >
-             {u.email}
-           </div>
-         ))}
+      {/* FULL LIST */}
+      {showUsers && (
+        <div className="bg-white border mt-2 rounded-lg max-h-40 overflow-y-auto shadow">
+          {users.map(u=>(
+            <div
+              key={u.uid}
+              onClick={()=>{
+                setSelectedUser(u);
+                setEmailInput(u.email);
+                setShowUsers(false);
+              }}
+              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+            >
+              {u.email}
+            </div>
+          ))}
+        </div>
+      )}
 
-       </div>
-     )}
+      {selectedUser && (
+        <div className="text-xs text-green-600 mt-1 font-medium">
+          ✅ Tanlandi: {selectedUser.email}
+        </div>
+      )}
+    </div>
 
-     {selectedUser && (
-       <div className="mt-2 bg-green-100 text-green-700 px-3 py-1 rounded-xl inline-block">
-         ✅ {selectedUser.email}
-       </div>
-     )}
+    {/* DATE */}
+    <div>
+      <p className="text-sm text-gray-500 mb-1">
+        📅 Vazifa sanasi
+      </p>
 
-   </div>
+      <input
+        type="date"
+        value={date}
+        onChange={(e)=>setDate(e.target.value)}
+        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+      />
+    </div>
 
-   {/* SEARCH */}
-   <input
-     value={search}
-     onChange={(e)=>setSearch(e.target.value)}
-     placeholder="🔍 Qidirish..."
-     className="w-full p-3 rounded-xl border"
-   />
+  </div>
 
-   {/* PROGRESS */}
-   <div>
-     <div className="w-full bg-gray-200 h-3 rounded-full">
-       <div 
-         className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3"
-         style={{width: percent+"%"}}
-       />
-     </div>
-     <p className="text-sm mt-1">{done}/{tasks.length}</p>
-   </div>
-
-   {/* FILTER */}
-   <select 
-     onChange={(e)=>setFilter(e.target.value)} 
-     className="p-2 border rounded-xl"
-   >
-     <option value="all">Hammasi</option>
-     <option value="done">Bajarilgan</option>
-     <option value="active">Bajarilmagan</option>
-   </select>
-
-   {/* ADD */}
-   <div className="bg-white p-6 rounded-2xl shadow space-y-3">
-
-    <div className="bg-white p-5 rounded-2xl shadow border space-y-4">
-
-  {/* 📅 DATE */}
-  <div className="flex items-center justify-between border-b pb-3">
-    <span className="text-sm font-medium text-gray-600">
-      📅 Vazifa sanasi
-    </span>
+  {/* 🔍 SEARCH */}
+  <div>
+    <p className="text-sm text-gray-500 mb-1">
+      🔍 Qidiruv
+    </p>
 
     <input
-      type="date"
-      value={date}
-      onChange={(e)=>setDate(e.target.value)}
-      className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+      value={search}
+      onChange={(e)=>setSearch(e.target.value)}
+      placeholder="Vazifa nomini yozing..."
+      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
     />
   </div>
+
+  {/* 📊 PROGRESS */}
+  <div>
+    <div className="flex justify-between text-xs text-gray-500 mb-1">
+      <span>Bajarilish</span>
+      <span>{done}/{tasks.length}</span>
+    </div>
+
+    <div className="w-full bg-gray-200 h-2 rounded-full">
+      <div 
+        className="bg-black h-2 rounded-full transition-all"
+        style={{width: percent+"%"}}
+      />
+    </div>
+
 
   {/* ⚡ PRIORITY */}
   <div className="space-y-2 border-b pb-3">
