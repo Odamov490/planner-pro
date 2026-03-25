@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 
 dotenv.config();
 
@@ -8,11 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.post("/ai-stream", async (req, res) => {
-
-  const { text } = req.body;
-
+app.post("/ai", async (req, res) => {
   try {
+    const { text } = req.body;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -22,7 +21,6 @@ app.post("/ai-stream", async (req, res) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        stream: true,
         messages: [
           {
             role: "system",
@@ -32,30 +30,22 @@ app.post("/ai-stream", async (req, res) => {
             role: "user",
             content: text
           }
-        ]
+        ],
+        max_tokens: 30
       })
     });
 
-    res.setHeader("Content-Type", "text/plain");
+    const data = await response.json();
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    res.json({
+      result: data.choices?.[0]?.message?.content || ""
+    });
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      res.write(chunk);
-    }
-
-    res.end();
-
-  } catch (err) {
-    res.status(500).send("error");
+  } catch (e) {
+    res.status(500).json({ error: "Server error" });
   }
 });
 
 app.listen(5000, () => {
-  console.log("🚀 Streaming server running http://localhost:5000");
+  console.log("Server running on http://localhost:5000");
 });

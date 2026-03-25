@@ -1,25 +1,24 @@
-export async function streamSuggestion(text, onUpdate){
+export async function getSuggestion(text) {
 
- if(!text || text.length < 3) return;
+  if (!text || text.length < 3) return "";
 
- const res = await fetch("http://localhost:5000/ai-stream",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({ text })
- });
+  try {
+    const res = await fetch("http://localhost:5000/ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text })
+    });
 
- const reader = res.body.getReader();
- const decoder = new TextDecoder();
+    const data = await res.json();
 
- let result = "";
+    console.log("AI RESPONSE:", data); // 👈 qo‘sh
 
- while(true){
-  const { done, value } = await reader.read();
-  if(done) break;
+    return data.result || "";
 
-  const chunk = decoder.decode(value);
-  result += chunk;
-
-  onUpdate(result); // 🔥 real-time update
- }
+  } catch (e) {
+    console.error("AI ERROR:", e);
+    return "";
+  }
 }

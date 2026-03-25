@@ -2,12 +2,14 @@ import { useState, useContext, useEffect } from "react";
 import { TaskContext } from "../context/TaskContext";
 import TaskCard from "../components/TaskCard";
 import { notify } from "../utils/notify";
-import { streamSuggestion } from "../utils/ai";
+import { getSuggestion } from "../utils/ai";
 
 export default function Tasks(){
 
  const [input,setInput]=useState("");
- const [suggestion,setSuggestion]=useState("");
+
+ const [suggestions,setSuggestions]=useState([]);
+ const [activeIndex,setActiveIndex]=useState(0);
 
  const [date,setDate]=useState("");
  const [priority,setPriority]=useState("");
@@ -24,21 +26,20 @@ export default function Tasks(){
    editTask
  } = useContext(TaskContext);
 
- // 🤖 STREAMING AI (Copilot style)
+ // 🤖 AI SUGGEST (tezlashtirilgan)
  useEffect(()=>{
 
   if(input.length < 3){
-    setSuggestion("");
+    setSuggestions([]);
     return;
   }
 
-  const t = setTimeout(()=>{
+  const t = setTimeout(async()=>{
 
-    setSuggestion("");
+    const res = await getSuggestion(input);
 
-    streamSuggestion(input, (text)=>{
-      setSuggestion(text);
-    });
+    setSuggestions(res);
+    setActiveIndex(0);
 
   },300);
 
@@ -46,7 +47,7 @@ export default function Tasks(){
 
  },[input]);
 
- // ➕ ADD TASK
+ // ➕ ADD
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -63,23 +64,35 @@ export default function Tasks(){
   notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
 
   setInput("");
-  setSuggestion("");
+  setSuggestions([]);
  };
 
  // ⌨️ KEYBOARD CONTROL
  const handleKeyDown = (e) => {
 
-  // ENTER → add
+  // ENTER
   if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
     handleAdd();
   }
 
-  // TAB → accept AI
-  if(e.key === "Tab" && suggestion){
+  // TAB → AI qabul qilish
+  if(e.key === "Tab" && suggestions.length){
     e.preventDefault();
-    setInput(suggestion);
-    setSuggestion("");
+    setInput(suggestions[activeIndex]);
+    setSuggestions([]);
+  }
+
+  // ↓
+  if(e.key === "ArrowDown"){
+    e.preventDefault();
+    setActiveIndex(prev => (prev + 1) % suggestions.length);
+  }
+
+  // ↑
+  if(e.key === "ArrowUp"){
+    e.preventDefault();
+    setActiveIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
   }
  };
 
@@ -124,12 +137,10 @@ export default function Tasks(){
  return (
   <div className="max-w-4xl mx-auto">
 
-   {/* TITLE */}
    <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
      Vazifalar
    </h1>
 
-   {/* SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
@@ -137,7 +148,6 @@ export default function Tasks(){
      className="w-full p-3 rounded-xl border mb-4"
    />
 
-   {/* PROGRESS */}
    <div className="mb-6">
      <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
@@ -150,7 +160,6 @@ export default function Tasks(){
      </p>
    </div>
 
-   {/* FILTER */}
    <div className="flex gap-2 mb-6">
      <select 
        onChange={(e)=>setFilter(e.target.value)} 
@@ -201,14 +210,14 @@ export default function Tasks(){
      {date && priority && category && (
        <div className="space-y-2">
 
-         {/* 👻 COPILOT INPUT */}
+         {/* 👻 GHOST INPUT */}
          <div className="relative">
 
-          {suggestion && suggestion.startsWith(input) && (
+          {suggestions.length > 0 && (
             <div className="absolute inset-0 p-4 text-gray-400 pointer-events-none whitespace-pre-wrap">
               {input}
               <span className="opacity-50">
-                {suggestion.slice(input.length)}
+                {suggestions[activeIndex]?.slice(input.length)}
               </span>
             </div>
           )}
@@ -223,7 +232,25 @@ export default function Tasks(){
 
          </div>
 
-         {/* ADD */}
+         {/* 🤖 VARIANTS */}
+         {suggestions.length > 0 && (
+           <div className="bg-white border rounded-xl shadow p-2 space-y-1">
+
+            {suggestions.map((s,i)=>(
+              <div
+                key={i}
+                className={`p-2 rounded cursor-pointer ${
+                  i===activeIndex ? "bg-blue-100" : ""
+                }`}
+                onClick={()=>setInput(s)}
+              >
+                🤖 {s}
+              </div>
+            ))}
+
+           </div>
+         )}
+
          <button
            onClick={handleAdd}
            className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-xl"
@@ -231,12 +258,27 @@ export default function Tasks(){
            ➕ Qo‘shish
          </button>
 
+         {/* 🤖 AUTO PLAN */}
+         <button
+           onClick={async()=>{
+            const res = await getSuggestion("Bugungi kun uchun 5 ta vazifa tuz");
+
+            await Promise.all(
+              res.map(r => addTask(r, date, priority, category))
+            );
+
+            notify("AI reja tuzdi 🤖");
+           }}
+           className="w-full bg-green-500 text-white py-2 rounded-xl"
+         >
+           🤖 Kunlik reja tuz
+         </button>
+
        </div>
      )}
 
    </div>
 
-   {/* TASK LIST */}
    <div className="space-y-6">
 
     {sortedDates.map(date=>(
@@ -244,9 +286,8 @@ export default function Tasks(){
 
         <div className="flex justify-between mb-3 border-b pb-2">
           <h2 className="font-bold text-blue-600">
-            📅 {date === todayStr ? "Bugun" : date === tomorrowStr ? "Ertaga" : date}
+            📅 {date}
           </h2>
-
           <span className="text-sm text-gray-400">
             {groupedTasks[date].length} ta
           </span>
