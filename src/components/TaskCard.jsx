@@ -61,11 +61,9 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
       </div>
 
       {/* 👤 EMAIL INFO */}
-      <p className="text-xs text-gray-500">
-        {task.type === "incoming"
-          ? `📩 ${task.createdByEmail} sizga topshiriq berdi`
-          : `📤 Siz ${task.assignedEmail || "foydalanuvchiga"} topshiriq berdingiz`}
-      </p>
+    {task.type === "incoming"
+  ? `📩 ${task.createdByEmail} sizga topshiriq berdi`
+  : `📤 Siz ${task.assignedEmail || "foydalanuvchiga"} topshiriq berdingiz`}
 
       {/* MAIN */}
       <div className="flex justify-between items-center">

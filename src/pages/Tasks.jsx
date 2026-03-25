@@ -61,7 +61,7 @@ export default function Tasks(){
 
  }, [input]);
 
- // ➕ ADD
+ // ➕ ADD (🔥 FIX QILINDI)
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -77,7 +77,8 @@ export default function Tasks(){
       date,
       priority,
       category,
-      selectedUser?.uid
+      selectedUser?.uid,
+      selectedUser?.email // 🔥 ENG MUHIM FIX
     ))
   );
 
@@ -133,7 +134,7 @@ export default function Tasks(){
      Vazifalar
    </h1>
 
-   {/* 👤 USER ASSIGN */}
+   {/* USER ASSIGN */}
    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border">
 
      <p className="font-semibold mb-2">👤 Vazifani kimga berasiz?</p>
@@ -157,7 +158,7 @@ export default function Tasks(){
        </button>
      </div>
 
-     {/* 🔍 AUTOCOMPLETE */}
+     {/* AUTOCOMPLETE */}
      {emailInput && (
        <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
 
@@ -177,7 +178,7 @@ export default function Tasks(){
        </div>
      )}
 
-     {/* 📋 FULL LIST */}
+     {/* FULL LIST */}
      {showUsers && (
        <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
 
@@ -198,7 +199,6 @@ export default function Tasks(){
        </div>
      )}
 
-     {/* ✅ SELECTED */}
      {selectedUser && (
        <div className="mt-2 bg-green-100 text-green-700 px-3 py-1 rounded-xl inline-block">
          ✅ {selectedUser.email}
@@ -207,7 +207,7 @@ export default function Tasks(){
 
    </div>
 
-   {/* 🔍 SEARCH */}
+   {/* SEARCH */}
    <input
      value={search}
      onChange={(e)=>setSearch(e.target.value)}
@@ -215,7 +215,7 @@ export default function Tasks(){
      className="w-full p-3 rounded-xl border"
    />
 
-   {/* 📊 PROGRESS */}
+   {/* PROGRESS */}
    <div>
      <div className="w-full bg-gray-200 h-3 rounded-full">
        <div 
@@ -296,23 +296,13 @@ export default function Tasks(){
 
        <div className="space-y-2">
          {groupedTasks[date].map(t=>(
-           <div key={t.id}>
-
-             {/* 🔥 LABEL */}
-             <div className="text-xs mb-1 text-gray-400">
-               {t.type==="incoming"
-                 ? `📥 ${t.createdByEmail}`
-                 : "📤 Siz berdingiz"}
-             </div>
-
-             <TaskCard
-               task={t}
-               onToggle={toggleTask}
-               onDelete={deleteTask}
-               onEdit={editTask}
-             />
-
-           </div>
+           <TaskCard
+             key={t.id}
+             task={t}
+             onToggle={toggleTask}
+             onDelete={deleteTask}
+             onEdit={editTask}
+           />
          ))}
        </div>
 
