@@ -21,7 +21,7 @@ export default function Tasks(){
    editTask
  } = useContext(TaskContext);
 
- // 🔥 ADD (multi + enter)
+ // 🔥 ADD
  const handleAdd = async () => {
 
   if(!input.trim()) return notify("Vazifa yozing ❗");
@@ -57,7 +57,7 @@ export default function Tasks(){
     return true;
   });
 
- // 📅 GROUP BY DATE
+ // 📅 GROUP
  const groupedTasks = {};
  filteredTasks.forEach(t=>{
   const d = t.date || "Sanasiz";
@@ -65,7 +65,7 @@ export default function Tasks(){
   groupedTasks[d].push(t);
  });
 
- // 🔥 SORT (YANGI TEPADA)
+ // 🔥 DATE SORT (eng yangi kun tepada)
  const sortedDates = Object.keys(groupedTasks)
    .sort((a,b)=> new Date(b) - new Date(a));
 
@@ -111,10 +111,9 @@ export default function Tasks(){
      </select>
    </div>
 
-   {/* 🔥 ADD BLOCK */}
+   {/* ADD BLOCK */}
    <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 space-y-4">
 
-     {/* STEP 1 */}
      <div className="flex gap-3 flex-wrap">
 
        <input 
@@ -148,7 +147,7 @@ export default function Tasks(){
 
      </div>
 
-     {/* 🔥 AUTO INPUT */}
+     {/* INPUT */}
      {date && priority && category && (
        <div className="space-y-3">
 
@@ -156,10 +155,7 @@ export default function Tasks(){
            value={input}
            onChange={(e)=>setInput(e.target.value)}
            onKeyDown={handleKeyDown}
-           placeholder={`✍️ Vazifa yozing...
-
-Shift + Enter → yangi qator
-Enter → qo‘shish`}
+           placeholder="✍️ Vazifa yozing..."
            className="w-full p-4 border rounded-xl min-h-[120px] focus:ring-2 focus:ring-blue-400"
          />
 
@@ -175,7 +171,7 @@ Enter → qo‘shish`}
 
    </div>
 
-   {/* 🔥 GROUPED TASKS */}
+   {/* TASK LIST */}
    <div className="space-y-6">
 
     {sortedDates.map(date=>(
@@ -192,7 +188,7 @@ Enter → qo‘shish`}
 
         <div className="space-y-3">
           {groupedTasks[date]
-            .sort((a,b)=>b.created - a.created) // 🔥 yangi tepada
+            .sort((a,b)=> new Date(b.created) - new Date(a.created)) // 🔥 ENG YANGI TEPADA
             .map(t=>(
               <TaskCard 
                 key={t.id} 
