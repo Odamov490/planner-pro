@@ -2,12 +2,15 @@ import { useState, useContext, useEffect } from "react";
 import { TaskContext } from "../context/TaskContext";
 import TaskCard from "../components/TaskCard";
 import { notify } from "../utils/notify";
-import { getSuggestion } from "../utils/ai"; // 🔥 AI qo‘shildi
+import { getSuggestion } from "../utils/ai";
+
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function Tasks(){
 
  const [input,setInput]=useState("");
- const [suggestion,setSuggestion]=useState(""); // 🔥 AI
+ const [suggestion,setSuggestion]=useState("");
 
  const [date,setDate]=useState("");
  const [priority,setPriority]=useState("");
@@ -16,6 +19,11 @@ export default function Tasks(){
  const [search,setSearch]=useState("");
  const [filter,setFilter]=useState("all");
 
+ // 🔥 NEW (USER ASSIGN)
+ const [users,setUsers]=useState([]);
+ const [emailInput,setEmailInput]=useState("");
+ const [selectedUser,setSelectedUser]=useState(null);
+
  const {
    tasks,
    addTask,
@@ -23,6 +31,18 @@ export default function Tasks(){
    deleteTask,
    editTask
  } = useContext(TaskContext);
+
+ // 🔥 USERS FETCH
+ useEffect(()=>{
+  const unsub = onSnapshot(collection(db,"users"),(snap)=>{
+    setUsers(snap.docs.map(d=>d.data()));
+  });
+  return ()=>unsub();
+ },[]);
+
+ const filteredUsers = users.filter(u =>
+  u.email?.toLowerCase().includes(emailInput.toLowerCase())
+ );
 
  // 🔥 AI AUTO SUGGEST
  useEffect(() => {
@@ -34,12 +54,7 @@ export default function Tasks(){
 
   const timeout = setTimeout(async () => {
 
-    console.log("AI SO‘RALDI:", input);
-
     const res = await getSuggestion(input);
-
-    console.log("AI JAVOB:", res);
-
     setSuggestion(res);
 
   }, 500);
@@ -59,25 +74,29 @@ export default function Tasks(){
     .filter(l => l);
 
   await Promise.all(
-    lines.map(line => addTask(line, date, priority, category))
+    lines.map(line => addTask(
+      line,
+      date,
+      priority,
+      category,
+      selectedUser?.uid // 🔥 ASSIGN
+    ))
   );
 
   notify(`${lines.length} ta vazifa qo‘shildi 🚀`);
 
   setInput("");
-  setSuggestion(""); // 🔥 tozalash
+  setSuggestion("");
  };
 
  // 🔥 ENTER + TAB
  const handleKeyDown = (e) => {
 
-  // ENTER → qo‘shish
   if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
     handleAdd();
   }
 
-  // TAB → AI ni olish
   if(e.key === "Tab" && suggestion){
     e.preventDefault();
     setInput(suggestion);
@@ -102,23 +121,9 @@ export default function Tasks(){
   groupedTasks[d].push(t);
  });
 
- const today = new Date();
- const todayStr = today.toISOString().split("T")[0];
+ const today = new Date().toISOString().split("T")[0];
 
- const tomorrow = new Date();
- tomorrow.setDate(today.getDate() + 1);
- const tomorrowStr = tomorrow.toISOString().split("T")[0];
-
- const sortedDates = Object.keys(groupedTasks).sort((a, b) => {
-
-  if (a === todayStr) return -1;
-  if (b === todayStr) return 1;
-
-  if (a === tomorrowStr) return -1;
-  if (b === tomorrowStr) return 1;
-
-  return new Date(a) - new Date(b);
- });
+ const sortedDates = Object.keys(groupedTasks).sort();
 
  const done = tasks.filter(t => t.completed).length;
  const percent = tasks.length ? (done / tasks.length) * 100 : 0;
@@ -129,6 +134,48 @@ export default function Tasks(){
    <h1 className="text-3xl font-extrabold mb-6 text-blue-600">
      Vazifalar
    </h1>
+
+   {/* 🔥 USER ASSIGN UI */}
+   <div className="bg-blue-50 p-4 rounded-2xl border mb-4">
+
+     <p className="font-semibold mb-2">👤 Vazifani kimga berasiz?</p>
+
+     <input
+       value={emailInput}
+       onChange={(e)=>{
+         setEmailInput(e.target.value);
+         setSelectedUser(null);
+       }}
+       placeholder="Email yozing..."
+       className="w-full p-3 border rounded-xl"
+     />
+
+     {emailInput && (
+       <div className="bg-white border mt-2 rounded-xl max-h-40 overflow-y-auto shadow">
+
+         {filteredUsers.map(u=>(
+           <div
+             key={u.uid}
+             onClick={()=>{
+               setSelectedUser(u);
+               setEmailInput(u.email);
+             }}
+             className="p-2 hover:bg-blue-100 cursor-pointer"
+           >
+             {u.email}
+           </div>
+         ))}
+
+       </div>
+     )}
+
+     {selectedUser && (
+       <p className="text-green-600 mt-2">
+         ✅ Tanlandi: {selectedUser.email}
+       </p>
+     )}
+
+   </div>
 
    <input
      value={search}
@@ -165,29 +212,16 @@ export default function Tasks(){
 
      <div className="flex gap-3 flex-wrap">
 
-       <input 
-         type="date"
-         value={date}
-         onChange={(e)=>setDate(e.target.value)}
-         className="p-3 border rounded-xl"
-       />
+       <input type="date" value={date} onChange={(e)=>setDate(e.target.value)} className="p-3 border rounded-xl"/>
 
-       <select 
-         value={priority}
-         onChange={(e)=>setPriority(e.target.value)}
-         className="p-3 border rounded-xl"
-       >
+       <select value={priority} onChange={(e)=>setPriority(e.target.value)} className="p-3 border rounded-xl">
          <option value="">Muhimlik *</option>
          <option value="high">🔴 Yuqori</option>
          <option value="medium">🟡 O‘rta</option>
          <option value="low">🟢 Past</option>
        </select>
 
-       <select 
-         value={category}
-         onChange={(e)=>setCategory(e.target.value)}
-         className="p-3 border rounded-xl"
-       >
+       <select value={category} onChange={(e)=>setCategory(e.target.value)} className="p-3 border rounded-xl">
          <option value="">Kategoriya *</option>
          <option>Ish</option>
          <option>O‘qish</option>
@@ -207,10 +241,9 @@ export default function Tasks(){
            className="w-full p-4 border rounded-xl min-h-[120px]"
          />
 
-         {/* 🔥 AI suggestion */}
          {suggestion && (
            <div className="text-gray-400 text-sm px-2">
-             🤖 {suggestion} (Tab bosing)
+             🤖 {suggestion} (Tab)
            </div>
          )}
 
@@ -226,31 +259,26 @@ export default function Tasks(){
 
    </div>
 
+   {/* TASK LIST */}
    <div className="space-y-6">
 
     {sortedDates.map(date=>(
       <div key={date} className="bg-white p-4 rounded-2xl shadow">
 
         <div className="flex justify-between mb-3 border-b pb-2">
-          <h2 className="font-bold text-blue-600">
-            📅 {date}
-          </h2>
-          <span className="text-sm text-gray-400">
-            {groupedTasks[date].length} ta
-          </span>
+          <h2 className="font-bold text-blue-600">📅 {date}</h2>
+          <span className="text-sm text-gray-400">{groupedTasks[date].length} ta</span>
         </div>
 
         <div className="space-y-3">
-          {groupedTasks[date]
-            .sort((a,b)=> new Date(b.created) - new Date(a.created))
-            .map(t=>(
-              <TaskCard 
-                key={t.id} 
-                task={t} 
-                onToggle={toggleTask} 
-                onDelete={deleteTask}
-                onEdit={editTask}
-              />
+          {groupedTasks[date].map(t=>(
+            <TaskCard 
+              key={t.id} 
+              task={t} 
+              onToggle={toggleTask} 
+              onDelete={deleteTask}
+              onEdit={editTask}
+            />
           ))}
         </div>
 
