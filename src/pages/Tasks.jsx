@@ -142,30 +142,45 @@ export default function Tasks(){
     <h2 className="text-lg font-bold text-gray-700">
       ⚙️ Boshqaruv paneli
     </h2>
- {/* 🔍 SEARCH */}
-  <div>
-    <p className="text-sm text-gray-500 mb-1">
-      🔍 Qidiruv
-    </p>
 
+    
+    {/* 🔍 SEARCH + FILTER (COMBINED) */}
+<div className="bg-white p-4 rounded-2xl shadow border flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+
+  {/* 🔍 SEARCH */}
+  <div className="flex-1">
     <input
       value={search}
       onChange={(e)=>setSearch(e.target.value)}
-      placeholder="Vazifa nomini yozing..."
-      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+      placeholder="🔍 Vazifa qidirish..."
+      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none transition"
     />
   </div>
-    {/* FILTER */}
-    <select 
-      value={filter}
-      onChange={(e)=>setFilter(e.target.value)} 
-      className="px-3 py-2 border rounded-lg text-sm bg-gray-50 hover:bg-white transition"
-    >
-      <option value="all">Hammasi</option>
-      <option value="done">Bajarilgan</option>
-      <option value="active">Faol</option>
-    </select>
+
+  {/* 🎯 FILTER */}
+  <div className="flex gap-2">
+
+    {[
+      {value:"all", label:"Hammasi"},
+      {value:"done", label:"Bajarilgan"},
+      {value:"active", label:"Faol"}
+    ].map(f=>(
+      <button
+        key={f.value}
+        onClick={()=>setFilter(f.value)}
+        className={`px-4 py-3 text-sm border rounded-lg transition
+          ${filter===f.value
+            ? "bg-black text-white"
+            : "bg-gray-50 hover:bg-gray-100"}
+        `}
+      >
+        {f.label}
+      </button>
+    ))}
+
   </div>
+ </div>
+</div>
 
   {/* 👤 ASSIGN + DATE */}
   <div className="grid md:grid-cols-2 gap-4">
