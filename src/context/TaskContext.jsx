@@ -19,19 +19,28 @@ export function TaskProvider({ children }) {
 
   useEffect(() => {
 
+    let unsubscribeTasks = null;
+
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
 
+      // ❌ logout bo‘lsa
       if (!user) {
         setTasks([]);
+        if (unsubscribeTasks) unsubscribeTasks();
         return;
       }
 
+      // 🔥 YANGI QUERY (assignedTo)
       const q = query(
         collection(db, "tasks"),
-        where("userId", "==", user.uid)
+        where("assignedTo", "==", user.uid)
       );
 
-      const unsubscribeTasks = onSnapshot(q, (snapshot) => {
+      // eski listenerni tozalash
+      if (unsubscribeTasks) unsubscribeTasks();
+
+      unsubscribeTasks = onSnapshot(q, (snapshot) => {
+
         const data = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -40,15 +49,18 @@ export function TaskProvider({ children }) {
         setTasks(data);
       });
 
-      return () => unsubscribeTasks();
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeTasks) unsubscribeTasks();
+    };
 
   }, []);
 
-  // ➕ ADD
-  const addTask = async (title, date, priority, category) => {
+  // ➕ ADD TASK (ASSIGN QO‘SHILDI)
+  const addTask = async (title, date, priority, category, assignedUser=null) => {
+
     if (!title) return;
 
     const user = auth.currentUser;
@@ -60,13 +72,16 @@ export function TaskProvider({ children }) {
       priority,
       category,
       completed: false,
-      userId: user.uid, // 🔥 FIX
+
+      userId: user.uid, // kim yaratdi
+      assignedTo: assignedUser || user.uid, // 🔥 kimga berildi
+
       subtasks: [],
       created: new Date()
     });
   };
 
-  // 🔁 TOGGLE
+  // 🔁 TOGGLE TASK
   const toggleTask = async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -76,7 +91,7 @@ export function TaskProvider({ children }) {
     });
   };
 
-  // ❌ DELETE
+  // ❌ DELETE TASK
   const deleteTask = async (id) => {
     await deleteDoc(doc(db, "tasks", id));
   };
@@ -92,6 +107,7 @@ export function TaskProvider({ children }) {
 
   // ➕ ADD SUBTASK
   const addSubtask = async (taskId, text) => {
+
     if (!text.trim()) return;
 
     const task = tasks.find(t => t.id === taskId);
@@ -99,7 +115,11 @@ export function TaskProvider({ children }) {
 
     const updated = [
       ...(task.subtasks || []),
-      { id: Date.now(), text, completed: false }
+      {
+        id: Date.now(),
+        text,
+        completed: false
+      }
     ];
 
     await updateDoc(doc(db, "tasks", taskId), {
@@ -109,11 +129,14 @@ export function TaskProvider({ children }) {
 
   // 🔁 TOGGLE SUBTASK
   const toggleSubtask = async (taskId, subId) => {
+
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
     const updated = (task.subtasks || []).map(s =>
-      s.id === subId ? { ...s, completed: !s.completed } : s
+      s.id === subId
+        ? { ...s, completed: !s.completed }
+        : s
     );
 
     await updateDoc(doc(db, "tasks", taskId), {
@@ -123,6 +146,7 @@ export function TaskProvider({ children }) {
 
   // ❌ DELETE SUBTASK
   const deleteSubtask = async (taskId, subId) => {
+
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
@@ -135,13 +159,16 @@ export function TaskProvider({ children }) {
 
   // ✏️ EDIT SUBTASK
   const editSubtask = async (taskId, subId, newText) => {
+
     if (!newText.trim()) return;
 
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
     const updated = (task.subtasks || []).map(s =>
-      s.id === subId ? { ...s, text: newText } : s
+      s.id === subId
+        ? { ...s, text: newText }
+        : s
     );
 
     await updateDoc(doc(db, "tasks", taskId), {
