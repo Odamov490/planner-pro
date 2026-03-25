@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from "react";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import {
   collection,
   addDoc,
@@ -17,41 +17,42 @@ export function TaskProvider({ children }) {
 
   const [tasks, setTasks] = useState([]);
 
-  const getUserId = () => {
-    let id = localStorage.getItem("userId");
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem("userId", id);
-    }
-    return id;
-  };
-
-  const userId = getUserId();
-
   useEffect(() => {
 
-    const q = query(
-      collection(db, "tasks"),
-      where("userId", "==", userId)
-    );
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      if (!user) {
+        setTasks([]);
+        return;
+      }
 
-      setTasks(data);
-      localStorage.setItem("tasks", JSON.stringify(data));
+      const q = query(
+        collection(db, "tasks"),
+        where("userId", "==", user.uid)
+      );
+
+      const unsubscribeTasks = onSnapshot(q, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        setTasks(data);
+      });
+
+      return () => unsubscribeTasks();
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
 
-  }, [userId]);
+  }, []);
 
   // ➕ ADD
   const addTask = async (title, date, priority, category) => {
     if (!title) return;
+
+    const user = auth.currentUser;
+    if (!user) return;
 
     await addDoc(collection(db, "tasks"), {
       title,
@@ -59,7 +60,7 @@ export function TaskProvider({ children }) {
       priority,
       category,
       completed: false,
-      userId,
+      userId: user.uid, // 🔥 FIX
       subtasks: [],
       created: new Date()
     });
