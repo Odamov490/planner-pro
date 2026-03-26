@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
         uid: user.uid,
         email: user.email,
         name: user.displayName || "",
+        photoURL: user.photoURL || "", // 🔥 MUHIM QO‘SHILDI
         createdAt: new Date()
       }, { merge: true });
 
