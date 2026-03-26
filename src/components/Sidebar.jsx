@@ -1,10 +1,17 @@
 import { NavLink } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import { TaskContext } from "../context/TaskContext"; // 🔥 QO‘SHILDI
 
 export default function Sidebar(){
 
   const { user, logout } = useContext(AuthContext);
+  const { tasks } = useContext(TaskContext); // 🔥 QO‘SHILDI
+
+  // 🔥 REAL COUNT
+  const incomingCount = tasks.filter(
+    t => t.assignedTo === user?.uid && !t.completed
+  ).length;
 
   const linkClass = ({isActive}) =>
     `relative flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group
@@ -95,9 +102,13 @@ export default function Sidebar(){
                 <span className="flex items-center gap-2">
                   📥 Menga berilgan
                 </span>
-                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                  3
-                </span>
+
+                {/* 🔥 REAL BADGE */}
+                {incomingCount > 0 && (
+                  <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse shadow">
+                    {incomingCount > 9 ? "9+" : incomingCount}
+                  </span>
+                )}
               </NavLink>
 
               <NavLink to="/outgoing" className={linkClass}>
@@ -124,6 +135,7 @@ export default function Sidebar(){
                 <span className="flex items-center gap-2">
                   🔔 Bildirishnomalar
                 </span>
+
                 <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
                   2
                 </span>
