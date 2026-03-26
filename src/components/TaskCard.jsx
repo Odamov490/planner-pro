@@ -43,29 +43,52 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete 
       className="bg-white p-4 rounded-2xl shadow space-y-3 border"
     >
 
-      {/* 🔥 TYPE */}
-      <div className="flex justify-between items-center text-xs">
+      {/* 🔥 AVATAR + EMAIL */}
+      <div className="flex justify-between items-center">
 
-        <span className={`px-2 py-1 rounded-full text-white ${
-          task.type === "incoming" ? "bg-green-500" : "bg-blue-500"
-        }`}>
-          {task.type === "incoming" ? "📥 Incoming" : "📤 Outgoing"}
-        </span>
+        <div className="flex items-center gap-3">
 
-        <span>
+          <img
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+              task.type === "incoming"
+                ? task.createdByEmail || "User"
+                : task.assignedEmail || "User"
+            )}&background=random`}
+            alt="avatar"
+            className="w-9 h-9 rounded-full shadow border"
+          />
+
+          <div className="text-sm text-gray-600 leading-tight">
+
+            {task.type === "incoming" ? (
+              <span>
+                <span className="font-semibold text-gray-800">
+                  {task.createdByEmail}
+                </span>{" "}
+                sizga topshiriq berdi
+              </span>
+            ) : (
+              <span>
+                Siz{" "}
+                <span className="font-semibold text-gray-800">
+                  {task.assignedEmail || "foydalanuvchi"}
+                </span>{" "}
+                ga topshiriq berdingiz
+              </span>
+            )}
+
+          </div>
+
+        </div>
+
+        {/* PRIORITY */}
+        <span className="text-xs">
           {task.priority === "high" && "🔴"}
           {task.priority === "medium" && "🟡"}
           {task.priority === "low" && "🟢"}
         </span>
 
       </div>
-
-      {/* 👤 EMAIL INFO */}
-      <p className="text-sm text-gray-600">
-        {task.type === "incoming"
-          ? `📩 ${task.createdByEmail} sizga topshiriq berdi`
-          : `📤 Siz ${task.assignedEmail || "foydalanuvchiga"} topshiriq berdingiz`}
-      </p>
 
       {/* MAIN */}
       <div className="flex justify-between items-center">
@@ -114,7 +137,6 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete 
             </button>
           )}
 
-          {/* 🔥 DELETE FAOLIYATNI BOSHQARISH */}
           {!hideDelete && (
             <button onClick={() => onDelete(task.id)} className="text-red-500">
               O‘chirish
