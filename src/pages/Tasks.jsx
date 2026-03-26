@@ -210,7 +210,7 @@ export default function Tasks(){
         </button>
       </div>
 
-      {/* AUTOCOMPLETE */}
+     {/* AUTOCOMPLETE 
       {emailInput && (
         <div className="bg-white border mt-2 rounded-lg max-h-40 overflow-y-auto shadow">
           {filteredUsers.map(u=>(
@@ -226,7 +226,7 @@ export default function Tasks(){
             </div>
           ))}
         </div>
-      )}
+      )}  */}
 
       {/* FULL LIST */}
       {showUsers && (
