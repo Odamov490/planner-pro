@@ -1,17 +1,22 @@
 import { NavLink } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { TaskContext } from "../context/TaskContext"; // 🔥 QO‘SHILDI
+import { TaskContext } from "../context/TaskContext";
+import { NotificationContext } from "../context/NotificationContext"; // 🔥 QO‘SHILDI
 
 export default function Sidebar(){
 
   const { user, logout } = useContext(AuthContext);
-  const { tasks } = useContext(TaskContext); // 🔥 QO‘SHILDI
+  const { tasks } = useContext(TaskContext);
+  const { notifications } = useContext(NotificationContext); // 🔥 QO‘SHILDI
 
-  // 🔥 REAL COUNT
+  // 🔥 INCOMING COUNT
   const incomingCount = tasks.filter(
     t => t.assignedTo === user?.uid && !t.completed
   ).length;
+
+  // 🔥 NOTIFICATION COUNT
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const linkClass = ({isActive}) =>
     `relative flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group
@@ -29,10 +34,8 @@ export default function Sidebar(){
   return (
     <div className="w-64 h-screen bg-gradient-to-b from-white via-blue-50 to-indigo-50 border-r shadow-lg p-4 flex flex-col justify-between fixed left-0 top-0 overflow-y-auto">
 
-      {/* TOP */}
       <div>
 
-        {/* LOGO */}
         <div className="mb-6">
           <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             ⚡ Planner
@@ -103,7 +106,6 @@ export default function Sidebar(){
                   📥 Menga berilgan
                 </span>
 
-                {/* 🔥 REAL BADGE */}
                 {incomingCount > 0 && (
                   <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse shadow">
                     {incomingCount > 9 ? "9+" : incomingCount}
@@ -131,14 +133,17 @@ export default function Sidebar(){
                 </span>
               </NavLink>
 
+              {/* 🔥 NOTIFICATION REAL */}
               <NavLink to="/notifications" className={linkClass}>
                 <span className="flex items-center gap-2">
                   🔔 Bildirishnomalar
                 </span>
 
-                <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
-                  2
-                </span>
+                {unreadCount > 0 && (
+                  <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse shadow">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </NavLink>
 
             </div>
