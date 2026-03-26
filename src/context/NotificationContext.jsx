@@ -6,8 +6,7 @@ import {
   where,
   onSnapshot,
   updateDoc,
-  doc,
-  orderBy
+  doc
 } from "firebase/firestore";
 
 export const NotificationContext = createContext();
@@ -28,19 +27,29 @@ export function NotificationProvider({ children }) {
         return;
       }
 
+      // 🔥 ORDERBY OLIB TASHLANDI (index muammo yo‘q)
       const q = query(
         collection(db, "notifications"),
-        where("userId", "==", user.uid),
-        orderBy("created", "desc")
+        where("userId", "==", user.uid)
       );
 
       if (unsubscribe) unsubscribe();
 
       unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
+
+        let data = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+
+        // 🔥 FRONTEND SORT (ENG YANGILARI TEPADA)
+        data = data.sort((a, b) => {
+          const aTime = a.created?.seconds || 0;
+          const bTime = b.created?.seconds || 0;
+          return bTime - aTime;
+        });
+
+        console.log("NOTIFICATIONS:", data); // 🔥 debug
 
         setNotifications(data);
       });
@@ -54,7 +63,7 @@ export function NotificationProvider({ children }) {
 
   }, []);
 
-  // 🔥 BIRTA O‘QILDI
+  // 🔥 BITTA O‘QILDI
   const markAsRead = async (id) => {
     await updateDoc(doc(db, "notifications", id), {
       read: true
@@ -63,6 +72,7 @@ export function NotificationProvider({ children }) {
 
   // 🔥 HAMMASINI O‘QILDI
   const markAllAsRead = async () => {
+
     const unread = notifications.filter(n => !n.read);
 
     for (let n of unread) {
