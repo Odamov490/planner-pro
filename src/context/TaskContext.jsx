@@ -92,31 +92,52 @@ export function TaskProvider({ children }) {
   }, []);
 
   // ➕ ADD TASK
-  const addTask = async (title, date, priority, category, assignedUser=null, assignedEmail=null) => {
+const addTask = async (
+  title,
+  date,
+  priority,
+  category,
+  assignedUser = null,
+  assignedEmail = null
+) => {
 
-    if (!title) return;
+  if (!title) return;
 
-    const user = auth.currentUser;
-    if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    await addDoc(collection(db, "tasks"), {
-      title,
-      date,
-      priority,
-      category,
-      completed: false,
+  const assignedTo = assignedUser || user.uid;
+  const assignedToEmail = assignedEmail || user.email;
 
-      userId: user.uid,
-      createdByEmail: user.email,
+  // 🔥 1. TASK SAQLASH
+  await addDoc(collection(db, "tasks"), {
+    title,
+    date,
+    priority,
+    category,
+    completed: false,
 
-      assignedTo: assignedUser || user.uid,
-      assignedEmail: assignedEmail || user.email, // 🔥 MUHIM
+    userId: user.uid,
+    createdByEmail: user.email,
 
-      subtasks: [],
+    assignedTo,
+    assignedEmail: assignedToEmail,
+
+    subtasks: [],
+    created: new Date()
+  });
+
+  // 🔥 2. NOTIFICATION YARATISH
+  // faqat o‘zingga bermagan bo‘lsang
+  if (assignedTo !== user.uid) {
+    await addDoc(collection(db, "notifications"), {
+      userId: assignedTo,
+      text: `${user.email} sizga vazifa berdi: "${title}"`,
+      read: false,
       created: new Date()
     });
-  };
-
+  }
+};
 
 
 
@@ -233,9 +254,3 @@ export function TaskProvider({ children }) {
   );
 }
 
-await addDoc(collection(db, "notifications"), {
-  userId: assignedUser || user.uid,
-  text: `${user.email} sizga vazifa berdi`,
-  read: false,
-  created: new Date()
-});
