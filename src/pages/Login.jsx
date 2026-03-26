@@ -59,13 +59,11 @@ export default function Login(){
         {/* 🔥 Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-white px-6">
 
-          <motion.h1 
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="text-2xl font-bold mb-4"
-          >
-            🚀 Planner Pro
-          </motion.h1>
+          <div className="mb-6">
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            ⚡ Planner
+          </h1>
+        </div>
 
           <p className="text-gray-400 text-sm mb-8 text-center">
             Smart planning starts here
