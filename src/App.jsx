@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Calendar from "./pages/Calendar";
 import Login from "./pages/Login";
+import Incoming from "./pages/Incoming";
+import Outgoing from "./pages/Outgoing";
 
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
@@ -26,6 +28,8 @@ function AppRoutes(){
           <Route path="/" element={<Dashboard/>}/>
           <Route path="/tasks" element={<Tasks/>}/>
           <Route path="/calendar" element={<Calendar/>}/>
+          <Route path="/incoming" element={<Incoming />} />
+          <Route path="/outgoing" element={<Outgoing />} />
         </Routes>
       </div>
     </div>
