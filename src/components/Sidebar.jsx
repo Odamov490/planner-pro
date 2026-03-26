@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -6,42 +6,76 @@ export default function Sidebar(){
 
   const { user, logout } = useContext(AuthContext);
 
-  return (
-    <div className="w-64 h-screen bg-gradient-to-b from-white to-blue-50 shadow-2xl p-6 flex flex-col justify-between fixed left-0 top-0">
+  const linkClass = ({isActive}) =>
+    `px-4 py-3 rounded-xl text-sm font-medium transition duration-300 flex items-center gap-2
+    ${isActive 
+      ? "bg-blue-500 text-white shadow-md" 
+      : "text-gray-700 hover:bg-blue-100 hover:text-blue-600 hover:scale-[1.02]"
+    }`;
 
+  return (
+    <div className="w-64 h-screen bg-gradient-to-b from-white to-blue-50 shadow-2xl p-6 flex flex-col justify-between fixed left-0 top-0 overflow-y-auto">
+
+      {/* TOP */}
       <div>
-        <h1 className="text-3xl font-extrabold mb-10 text-blue-600 tracking-wide">
+
+        {/* LOGO */}
+        <h1 className="text-3xl font-extrabold mb-8 text-blue-600 tracking-wide">
           📘 Reja
         </h1>
 
-        <nav className="flex flex-col gap-3">
-          <Link 
-            to="/" 
-            className="px-4 py-3 rounded-xl text-gray-700 font-medium 
-            hover:bg-blue-100 hover:text-blue-600 
-            hover:scale-105 transition duration-300 shadow-sm hover:shadow-md"
-          >
-            Dashboard
-          </Link>
+        {/* 📊 ASOSIY */}
+        <div className="mb-6">
+          <p className="text-xs text-gray-400 mb-2">ASOSIY</p>
 
-          <Link 
-            to="/tasks" 
-            className="px-4 py-3 rounded-xl text-gray-700 font-medium 
-            hover:bg-blue-100 hover:text-blue-600 
-            hover:scale-105 transition duration-300 shadow-sm hover:shadow-md"
-          >
-            Vazifalar
-          </Link>
+          <nav className="flex flex-col gap-2">
+            <NavLink to="/" className={linkClass}>📊 Dashboard</NavLink>
+            <NavLink to="/tasks" className={linkClass}>📝 Vazifalar</NavLink>
+            <NavLink to="/calendar" className={linkClass}>📅 Kalendar</NavLink>
+          </nav>
+        </div>
 
-          <Link 
-            to="/calendar" 
-            className="px-4 py-3 rounded-xl text-gray-700 font-medium 
-            hover:bg-blue-100 hover:text-blue-600 
-            hover:scale-105 transition duration-300 shadow-sm hover:shadow-md"
-          >
-            Kalendar
-          </Link>
-        </nav>
+        {/* 👥 JAMOA */}
+        <div className="mb-6">
+          <p className="text-xs text-gray-400 mb-2">JAMOA</p>
+
+          <nav className="flex flex-col gap-2">
+            <NavLink to="/team" className={linkClass}>👥 Jamoa</NavLink>
+            <NavLink to="/company" className={linkClass}>🏢 Kompaniya</NavLink>
+            <NavLink to="/invites" className={linkClass}>📨 Takliflar</NavLink>
+          </nav>
+        </div>
+
+        {/* 📥 TOPSHIRIQLAR */}
+        <div className="mb-6">
+          <p className="text-xs text-gray-400 mb-2">TOPSHIRIQLAR</p>
+
+          <nav className="flex flex-col gap-2">
+            <NavLink to="/incoming" className={linkClass}>📥 Menga berilgan</NavLink>
+            <NavLink to="/outgoing" className={linkClass}>📤 Men bergan</NavLink>
+          </nav>
+        </div>
+
+        {/* 🧠 SHAXSIY */}
+        <div className="mb-6">
+          <p className="text-xs text-gray-400 mb-2">SHAXSIY</p>
+
+          <nav className="flex flex-col gap-2">
+            <NavLink to="/journal" className={linkClass}>📝 Kundalik</NavLink>
+            <NavLink to="/notifications" className={linkClass}>🔔 Bildirishnomalar</NavLink>
+          </nav>
+        </div>
+
+        {/* ⚙️ TIZIM */}
+        <div className="mb-6">
+          <p className="text-xs text-gray-400 mb-2">TIZIM</p>
+
+          <nav className="flex flex-col gap-2">
+            <NavLink to="/activity" className={linkClass}>🧭 Faoliyat log</NavLink>
+            <NavLink to="/settings" className={linkClass}>⚙️ Sozlamalar</NavLink>
+          </nav>
+        </div>
+
       </div>
 
       {/* 🔥 USER PANEL */}
@@ -50,7 +84,7 @@ export default function Sidebar(){
         {/* AVATAR */}
         <img
           src={user?.photoURL || "https://i.pravatar.cc/100"}
-          className="w-12 h-12 rounded-full mx-auto mb-2"
+          className="w-12 h-12 rounded-full mx-auto mb-2 border"
         />
 
         {/* NAME */}
@@ -59,7 +93,7 @@ export default function Sidebar(){
         </p>
 
         {/* EMAIL */}
-        <p className="text-xs text-gray-400 mb-2">
+        <p className="text-xs text-gray-400 mb-2 break-all">
           {user?.email}
         </p>
 
@@ -80,6 +114,3 @@ export default function Sidebar(){
     </div>
   );
 }
-
-
-/* tugadi */

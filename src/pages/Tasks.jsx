@@ -210,23 +210,7 @@ export default function Tasks(){
         </button>
       </div>
 
-     {/* AUTOCOMPLETE 
-      {emailInput && (
-        <div className="bg-white border mt-2 rounded-lg max-h-40 overflow-y-auto shadow">
-          {filteredUsers.map(u=>(
-            <div
-              key={u.uid}
-              onClick={()=>{
-                setSelectedUser(u);
-                setEmailInput(u.email);
-              }}
-              className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
-            >
-              {u.email}
-            </div>
-          ))}
-        </div>
-      )}  */}
+   
 
       {/* FULL LIST */}
       {showUsers && (
