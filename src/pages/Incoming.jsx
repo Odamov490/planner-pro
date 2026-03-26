@@ -37,6 +37,8 @@ export default function Incoming(){
             onToggle={toggleTask}
             onDelete={deleteTask}
             onEdit={editTask}
+
+            hideDelete={true} // 🔥 SHU QO‘SHILDI
           />
         ))}
 

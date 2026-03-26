@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { TaskContext } from "../context/TaskContext";
 
-export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
+export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete = false }) {
 
   const { addSubtask, toggleSubtask, deleteSubtask, editSubtask } = useContext(TaskContext);
 
@@ -61,9 +61,11 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
       </div>
 
       {/* 👤 EMAIL INFO */}
-    {task.type === "incoming"
-  ? `📩 ${task.createdByEmail} sizga topshiriq berdi`
-  : `📤 Siz ${task.assignedEmail || "foydalanuvchiga"} topshiriq berdingiz`}
+      <p className="text-sm text-gray-600">
+        {task.type === "incoming"
+          ? `📩 ${task.createdByEmail} sizga topshiriq berdi`
+          : `📤 Siz ${task.assignedEmail || "foydalanuvchiga"} topshiriq berdingiz`}
+      </p>
 
       {/* MAIN */}
       <div className="flex justify-between items-center">
@@ -112,9 +114,12 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit }) {
             </button>
           )}
 
-          <button onClick={() => onDelete(task.id)} className="text-red-500">
-            O‘chirish
-          </button>
+          {/* 🔥 DELETE FAOLIYATNI BOSHQARISH */}
+          {!hideDelete && (
+            <button onClick={() => onDelete(task.id)} className="text-red-500">
+              O‘chirish
+            </button>
+          )}
 
         </div>
 
