@@ -1,10 +1,12 @@
 import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { TaskContext } from "../context/TaskContext";
+import { UserContext } from "../context/UserContext"; // 🔥 QO‘SHILDI
 
 export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete = false }) {
 
   const { addSubtask, toggleSubtask, deleteSubtask, editSubtask } = useContext(TaskContext);
+  const { users } = useContext(UserContext); // 🔥 QO‘SHILDI
 
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(task.title);
@@ -18,6 +20,13 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete 
   const totalSub = task.subtasks?.length || 0;
   const doneSub = task.subtasks?.filter(s => s.completed).length || 0;
   const percent = totalSub ? Math.round((doneSub / totalSub) * 100) : 0;
+
+  // 🔥 USER TOPISH
+  const targetEmail = task.type === "incoming"
+    ? task.createdByEmail
+    : task.assignedEmail;
+
+  const foundUser = users?.find(u => u.email === targetEmail);
 
   const handleSave = async () => {
     if (!newTitle.trim()) return;
@@ -49,11 +58,10 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete 
         <div className="flex items-center gap-3">
 
           <img
-            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-              task.type === "incoming"
-                ? task.createdByEmail || "User"
-                : task.assignedEmail || "User"
-            )}&background=random`}
+            src={
+              foundUser?.photoURL ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(targetEmail || "User")}`
+            }
             alt="avatar"
             className="w-9 h-9 rounded-full shadow border"
           />
@@ -117,7 +125,7 @@ export default function TaskCard({ task, onToggle, onDelete, onEdit, hideDelete 
 
         </div>
 
-        {/* 🔥 TEXT BUTTONS */}
+        {/* 🔥 BUTTONS */}
         <div className="flex gap-2 text-sm">
 
           <button
