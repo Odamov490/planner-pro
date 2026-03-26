@@ -7,107 +7,148 @@ export default function Sidebar(){
   const { user, logout } = useContext(AuthContext);
 
   const linkClass = ({isActive}) =>
-    `flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 group
+    `relative flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group
+
     ${isActive
-      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg"
+      ? "bg-blue-50 text-blue-600"
       : "text-gray-600 hover:bg-gray-100 hover:text-blue-600"
-    }`;
+    }
+
+    before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+    before:w-1 before:h-6 before:rounded-full
+    ${isActive ? "before:bg-blue-500" : "before:bg-transparent"}
+  `;
 
   return (
-    <div className="w-64 h-screen backdrop-blur-xl bg-white/80 border-r shadow-xl p-5 flex flex-col justify-between fixed left-0 top-0">
+    <div className="w-64 h-screen bg-gradient-to-b from-white via-blue-50 to-indigo-50 border-r shadow-lg p-4 flex flex-col justify-between fixed left-0 top-0 overflow-y-auto">
 
       {/* TOP */}
       <div>
 
         {/* LOGO */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+        <div className="mb-6">
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             ⚡ Planner
           </h1>
         </div>
 
-        {/* MENU */}
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           {/* ASOSIY */}
           <div>
-            <p className="text-xs text-gray-400 mb-2">ASOSIY</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-1 px-1">ASOSIY</p>
+            <div className="flex flex-col gap-1">
+
               <NavLink to="/" className={linkClass}>
-                <span>📊 Dashboard</span>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  📊 Dashboard
+                </span>
               </NavLink>
 
               <NavLink to="/tasks" className={linkClass}>
-                <span>📝 Vazifalar</span>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  📝 Vazifalar
+                </span>
               </NavLink>
 
               <NavLink to="/calendar" className={linkClass}>
-                <span>📅 Kalendar</span>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  📅 Kalendar
+                </span>
               </NavLink>
+
             </div>
           </div>
 
           {/* JAMOA */}
           <div>
-            <p className="text-xs text-gray-400 mb-2">JAMOA</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-1 px-1">JAMOA</p>
+            <div className="flex flex-col gap-1">
+
               <NavLink to="/team" className={linkClass}>
-                <span>👥 Jamoa</span>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  👥 Jamoa
+                </span>
               </NavLink>
 
               <NavLink to="/company" className={linkClass}>
-                <span>🏢 Kompaniya</span>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  🏢 Kompaniya
+                </span>
               </NavLink>
 
               <NavLink to="/invites" className={linkClass}>
-                <span>📨 Takliflar</span>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  📨 Takliflar
+                </span>
               </NavLink>
+
             </div>
           </div>
 
-          {/* TASK FLOW */}
+          {/* TOPSHIRIQLAR */}
           <div>
-            <p className="text-xs text-gray-400 mb-2">TOPSHIRIQLAR</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-1 px-1">TOPSHIRIQLAR</p>
+            <div className="flex flex-col gap-1">
+
               <NavLink to="/incoming" className={linkClass}>
-                <span>📥 Menga berilgan</span>
-                <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">3</span>
+                <span className="flex items-center gap-2">
+                  📥 Menga berilgan
+                </span>
+                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                  3
+                </span>
               </NavLink>
 
               <NavLink to="/outgoing" className={linkClass}>
-                <span>📤 Men bergan</span>
+                <span className="flex items-center gap-2">
+                  📤 Men bergan
+                </span>
               </NavLink>
+
             </div>
           </div>
 
-          {/* PERSONAL */}
+          {/* SHAXSIY */}
           <div>
-            <p className="text-xs text-gray-400 mb-2">SHAXSIY</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-1 px-1">SHAXSIY</p>
+            <div className="flex flex-col gap-1">
+
               <NavLink to="/journal" className={linkClass}>
-                <span>📝 Kundalik</span>
+                <span className="flex items-center gap-2">
+                  📝 Kundalik
+                </span>
               </NavLink>
 
               <NavLink to="/notifications" className={linkClass}>
-                <span>🔔 Bildirishnomalar</span>
-                <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-2">
+                  🔔 Bildirishnomalar
+                </span>
+                <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
                   2
                 </span>
               </NavLink>
+
             </div>
           </div>
 
-          {/* SYSTEM */}
+          {/* TIZIM */}
           <div>
-            <p className="text-xs text-gray-400 mb-2">TIZIM</p>
-            <div className="space-y-2">
+            <p className="text-xs text-gray-400 mb-1 px-1">TIZIM</p>
+            <div className="flex flex-col gap-1">
+
               <NavLink to="/activity" className={linkClass}>
-                <span>🧭 Faoliyat log</span>
+                <span className="flex items-center gap-2">
+                  🧭 Faoliyat log
+                </span>
               </NavLink>
 
               <NavLink to="/settings" className={linkClass}>
-                <span>⚙️ Sozlamalar</span>
+                <span className="flex items-center gap-2">
+                  ⚙️ Sozlamalar
+                </span>
               </NavLink>
+
             </div>
           </div>
 
@@ -116,13 +157,13 @@ export default function Sidebar(){
       </div>
 
       {/* USER PANEL */}
-      <div className="mt-6 pt-4 border-t">
+      <div className="pt-4 border-t">
 
         <div className="flex items-center gap-3">
 
           <img
             src={user?.photoURL || "https://i.pravatar.cc/100"}
-            className="w-10 h-10 rounded-full border"
+            className="w-10 h-10 rounded-full border shadow-sm"
           />
 
           <div className="flex-1">
