@@ -6,7 +6,8 @@ import {
   where,
   onSnapshot,
   updateDoc,
-  doc
+  doc,
+  deleteDoc
 } from "firebase/firestore";
 
 export const NotificationContext = createContext();
@@ -27,7 +28,6 @@ export function NotificationProvider({ children }) {
         return;
       }
 
-      // 🔥 ORDERBY OLIB TASHLANDI (index muammo yo‘q)
       const q = query(
         collection(db, "notifications"),
         where("userId", "==", user.uid)
@@ -42,14 +42,14 @@ export function NotificationProvider({ children }) {
           ...doc.data()
         }));
 
-        // 🔥 FRONTEND SORT (ENG YANGILARI TEPADA)
+        // 🔥 SORT (ENG YANGI TEPADA)
         data = data.sort((a, b) => {
           const aTime = a.created?.seconds || 0;
           const bTime = b.created?.seconds || 0;
           return bTime - aTime;
         });
 
-        console.log("NOTIFICATIONS:", data); // 🔥 debug
+        console.log("NOTIFICATIONS:", data);
 
         setNotifications(data);
       });
@@ -72,7 +72,6 @@ export function NotificationProvider({ children }) {
 
   // 🔥 HAMMASINI O‘QILDI
   const markAllAsRead = async () => {
-
     const unread = notifications.filter(n => !n.read);
 
     for (let n of unread) {
@@ -82,11 +81,44 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  // 🗑 FAQAT O‘QILGANLARNI O‘CHIRISH
+  const deleteReadNotifications = async () => {
+    const readOnes = notifications.filter(n => n.read);
+
+    for (let n of readOnes) {
+      await deleteDoc(doc(db, "notifications", n.id));
+    }
+  };
+
+  // 🗑 HAMMASINI O‘CHIRISH
+  const deleteAllNotifications = async () => {
+    for (let n of notifications) {
+      await deleteDoc(doc(db, "notifications", n.id));
+    }
+  };
+
+  // 🔄 REFRESH (UI TRIGGER)
+  const refreshNotifications = () => {
+    setNotifications(prev => [...prev]);
+  };
+
+  // 📊 COUNTLAR (PRO LEVEL)
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const readCount = notifications.filter(n => n.read).length;
+
   return (
     <NotificationContext.Provider value={{
       notifications,
       markAsRead,
-      markAllAsRead
+      markAllAsRead,
+
+      deleteReadNotifications,   // 🗑
+      deleteAllNotifications,    // 🗑
+
+      refreshNotifications,      // 🔄
+
+      unreadCount,               // 📊
+      readCount                  // 📊
     }}>
       {children}
     </NotificationContext.Provider>
