@@ -117,6 +117,10 @@ export function TaskProvider({ children }) {
     });
   };
 
+
+
+
+  
   // 🔁 TOGGLE
   const toggleTask = async (id) => {
     const task = tasks.find(t => t.id === id);
@@ -228,3 +232,10 @@ export function TaskProvider({ children }) {
     </TaskContext.Provider>
   );
 }
+
+await addDoc(collection(db, "notifications"), {
+  userId: assignedUser || user.uid,
+  text: `${user.email} sizga vazifa berdi`,
+  read: false,
+  created: new Date()
+});
