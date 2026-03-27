@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Incoming from "./pages/Incoming";
 import Outgoing from "./pages/Outgoing";
 import Notifications from "./pages/Notifications";
+import Teams from "./pages/Teams";
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
   const { user } = useContext(AuthContext);
@@ -31,6 +32,7 @@ function AppRoutes(){
           <Route path="/incoming" element={<Incoming />} />
           <Route path="/outgoing" element={<Outgoing />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/teams" element={<Teams />} />
         </Routes>
       </div>
     </div>
