@@ -9,19 +9,23 @@ import {
   onSnapshot
 } from "firebase/firestore";
 
-// 🔥 BOARD (NULL YO‘Q)
+// 🔥 1D BOARD
 const createBoard = () => {
-  const board = Array(8).fill("").map(()=>Array(8).fill(""));
+  const board = Array(64).fill("");
 
   for(let i=0;i<3;i++){
     for(let j=0;j<8;j++){
-      if((i+j)%2===1) board[i][j] = "b";
+      if((i+j)%2===1){
+        board[i*8 + j] = "b";
+      }
     }
   }
 
   for(let i=5;i<8;i++){
     for(let j=0;j<8;j++){
-      if((i+j)%2===1) board[i][j] = "w";
+      if((i+j)%2===1){
+        board[i*8 + j] = "w";
+      }
     }
   }
 
@@ -63,36 +67,31 @@ export default function Checkers(){
       alert("O‘yin yaratildi ✅ ID: " + id);
 
     } catch (err) {
-      console.error("ERROR:", err);
+      console.error(err);
       alert(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // 🤝 JOIN GAME
+  // 🤝 JOIN
   const joinGame = async () => {
 
-    if(!gameId) return alert("Game ID yozing");
+    if(!gameId) return alert("ID kiriting");
 
-    try {
-      const ref = doc(db,"games",gameId);
-      const snap = await getDoc(ref);
+    const ref = doc(db,"games",gameId);
+    const snap = await getDoc(ref);
 
-      if(!snap.exists()) return alert("Game topilmadi ❌");
+    if(!snap.exists()) return alert("Topilmadi ❌");
 
-      const data = snap.data();
+    const data = snap.data();
 
-      if(data.player2) return alert("Game to‘la ❗");
+    if(data.player2) return alert("Band ❗");
 
-      await updateDoc(ref,{
-        player2: user.uid,
-        status: "playing"
-      });
-
-    } catch (err){
-      console.error(err);
-    }
+    await updateDoc(ref,{
+      player2: user.uid,
+      status: "playing"
+    });
   };
 
   // 🔄 REALTIME
@@ -113,14 +112,17 @@ export default function Checkers(){
 
     if(game.turn !== user.uid) return;
 
-    const board = game.board.map(r=>[...r]);
+    const board = [...game.board];
+
+    const index = i*8 + j;
 
     const isPlayer1 = user.uid === game.player1;
     const myPiece = isPlayer1 ? "b" : "w";
 
     if(selected){
 
-      const piece = board[selected.i][selected.j];
+      const selectedIndex = selected.i*8 + selected.j;
+      const piece = board[selectedIndex];
 
       if(piece !== myPiece){
         setSelected(null);
@@ -132,9 +134,9 @@ export default function Checkers(){
       const dir = myPiece === "w" ? -1 : 1;
 
       // oddiy yurish
-      if(dx === dir && Math.abs(dy) === 1 && board[i][j] === ""){
-        board[i][j] = piece;
-        board[selected.i][selected.j] = "";
+      if(dx === dir && Math.abs(dy) === 1 && board[index] === ""){
+        board[index] = piece;
+        board[selectedIndex] = "";
       } else {
         return;
       }
@@ -147,7 +149,7 @@ export default function Checkers(){
       setSelected(null);
 
     } else {
-      if(board[i][j] === myPiece){
+      if(board[index] === myPiece){
         setSelected({i,j});
       }
     }
@@ -166,10 +168,10 @@ export default function Checkers(){
         disabled={loading}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
-        {loading ? "Yaratilmoqda..." : "🎮 O‘yin yaratish"}
+        {loading ? "..." : "🎮 O‘yin yaratish"}
       </button>
 
-      {/* GAME ID */}
+      {/* ID */}
       {gameId && (
         <div className="text-green-600 text-sm">
           Game ID: {gameId}
@@ -209,32 +211,33 @@ export default function Checkers(){
       {game && (
         <div className="grid grid-cols-8 w-[400px] border">
 
-          {game.board.map((row,i)=>
-            row.map((cell,j)=>{
+          {game.board.map((cell,index)=>{
 
-              const isDark = (i+j)%2===1;
+            const i = Math.floor(index/8);
+            const j = index % 8;
 
-              return (
-                <div
-                  key={i+"-"+j}
-                  onClick={()=>handleMove(i,j)}
-                  className={`w-12 h-12 flex items-center justify-center cursor-pointer
-                    ${isDark ? "bg-gray-700" : "bg-gray-200"}
-                  `}
-                >
+            const isDark = (i+j)%2===1;
 
-                  {cell !== "" && (
-                    <div
-                      className={`w-8 h-8 rounded-full
-                        ${cell==="b" ? "bg-black" : "bg-white border"}
-                      `}
-                    />
-                  )}
+            return (
+              <div
+                key={index}
+                onClick={()=>handleMove(i,j)}
+                className={`w-12 h-12 flex items-center justify-center cursor-pointer
+                  ${isDark ? "bg-gray-700" : "bg-gray-200"}
+                `}
+              >
 
-                </div>
-              );
-            })
-          )}
+                {cell !== "" && (
+                  <div
+                    className={`w-8 h-8 rounded-full
+                      ${cell==="b" ? "bg-black" : "bg-white border"}
+                    `}
+                  />
+                )}
+
+              </div>
+            );
+          })}
 
         </div>
       )}
