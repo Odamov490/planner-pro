@@ -34,40 +34,66 @@ export default function Checkers(){
   const [gameId,setGameId] = useState("");
   const [game,setGame] = useState(null);
   const [selected,setSelected] = useState(null);
+  const [loading,setLoading] = useState(false);
 
-  // 🎮 CREATE GAME
+  // 🎮 CREATE GAME (FIXED)
   const createGame = async () => {
 
-    const id = Date.now().toString();
+    if(!user){
+      alert("User topilmadi ❌ Login qiling");
+      return;
+    }
 
-    await setDoc(doc(db,"games",id),{
-      board: createBoard(),
-      player1: user.uid,
-      player2: null,
-      turn: user.uid,
-      status: "waiting",
-      winner: null
-    });
+    try {
+      setLoading(true);
 
-    setGameId(id);
+      const id = Date.now().toString();
+
+      await setDoc(doc(db,"games",id),{
+        board: createBoard(),
+        player1: user.uid,
+        player2: null,
+        turn: user.uid,
+        status: "waiting",
+        winner: null
+      });
+
+      console.log("Game created:", id);
+
+      setGameId(id);
+      alert("O‘yin yaratildi ✅ ID: " + id);
+
+    } catch (err) {
+      console.error("CREATE ERROR:", err);
+      alert("Xatolik yuz berdi ❌");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 🤝 JOIN GAME
   const joinGame = async () => {
 
-    const ref = doc(db,"games",gameId);
-    const snap = await getDoc(ref);
+    if(!gameId) return alert("Game ID yozing");
 
-    if(!snap.exists()) return alert("Game topilmadi ❌");
+    try {
+      const ref = doc(db,"games",gameId);
+      const snap = await getDoc(ref);
 
-    const data = snap.data();
+      if(!snap.exists()) return alert("Game topilmadi ❌");
 
-    if(data.player2) return alert("Game to‘la ❗");
+      const data = snap.data();
 
-    await updateDoc(ref,{
-      player2: user.uid,
-      status: "playing"
-    });
+      if(data.player2) return alert("Game to‘la ❗");
+
+      await updateDoc(ref,{
+        player2: user.uid,
+        status: "playing"
+      });
+
+    } catch (err){
+      console.error(err);
+    }
   };
 
   // 🔄 REALTIME
@@ -81,39 +107,12 @@ export default function Checkers(){
     return ()=>unsub();
   },[gameId]);
 
-  // 🎯 MOVE LOGIC
-  const isValidMove = (from,to,piece,board) => {
-
-    const dir = piece === "w" ? -1 : 1;
-    const dx = to.i - from.i;
-    const dy = to.j - from.j;
-
-    // oddiy yurish
-    if(dx === dir && Math.abs(dy) === 1 && !board[to.i][to.j]){
-      return true;
-    }
-
-    // urish
-    if(dx === dir*2 && Math.abs(dy) === 2){
-      const midI = (from.i + to.i)/2;
-      const midJ = (from.j + to.j)/2;
-
-      const enemy = board[midI][midJ];
-
-      if(enemy && enemy !== piece && !board[to.i][to.j]){
-        return { eat: {i:midI,j:midJ} };
-      }
-    }
-
-    return false;
-  };
-
-  // 🔥 MOVE
+  // 🎯 MOVE
   const handleMove = async (i,j) => {
 
     if(!game || game.status!=="playing") return;
 
-    if(game.turn !== user.uid) return alert("Navbat sizda emas ❗");
+    if(game.turn !== user.uid) return;
 
     const board = game.board.map(r=>[...r]);
 
@@ -129,33 +128,21 @@ export default function Checkers(){
         return;
       }
 
-      const result = isValidMove(selected,{i,j},piece,board);
+      const dx = i - selected.i;
+      const dy = j - selected.j;
+      const dir = myPiece === "w" ? -1 : 1;
 
-      if(!result) return;
-
-      // move
-      board[i][j] = piece;
-      board[selected.i][selected.j] = null;
-
-      // eat
-      if(result.eat){
-        board[result.eat.i][result.eat.j] = null;
+      // oddiy yurish
+      if(dx === dir && Math.abs(dy) === 1 && !board[i][j]){
+        board[i][j] = piece;
+        board[selected.i][selected.j] = null;
+      } else {
+        return;
       }
-
-      // winner check
-      const allPieces = board.flat();
-      const whiteLeft = allPieces.includes("w");
-      const blackLeft = allPieces.includes("b");
-
-      let winner = null;
-
-      if(!whiteLeft) winner = game.player1;
-      if(!blackLeft) winner = game.player2;
 
       await updateDoc(doc(db,"games",gameId),{
         board,
-        turn: user.uid === game.player1 ? game.player2 : game.player1,
-        winner
+        turn: user.uid === game.player1 ? game.player2 : game.player1
       });
 
       setSelected(null);
@@ -177,10 +164,18 @@ export default function Checkers(){
       {/* CREATE */}
       <button
         onClick={createGame}
+        disabled={loading}
         className="bg-blue-500 text-white px-4 py-2 rounded"
       >
-        🎮 O‘yin yaratish
+        {loading ? "Yaratilmoqda..." : "🎮 O‘yin yaratish"}
       </button>
+
+      {/* GAME ID */}
+      {gameId && (
+        <div className="text-sm text-green-600">
+          Game ID: {gameId}
+        </div>
+      )}
 
       {/* JOIN */}
       <div className="flex gap-2">
@@ -201,12 +196,10 @@ export default function Checkers(){
 
       {/* STATUS */}
       {game && (
-        <div className="text-sm text-gray-600">
-          {game.winner
-            ? "🏆 G‘olib bor!"
-            : game.turn === user.uid
-              ? "Sizning navbatingiz"
-              : "Raqib yurmoqda..."}
+        <div>
+          {game.turn === user.uid
+            ? "Siz yurishingiz kerak"
+            : "Raqib yurmoqda"}
         </div>
       )}
 
