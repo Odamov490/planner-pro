@@ -148,36 +148,35 @@ export default function Sidebar(){
 
             </div>
           </div>
-
-          {/* TIZIM */}
-          <div>
-            <p className="text-xs text-gray-400 mb-1 px-1">TIZIM</p>
-            <div className="flex flex-col gap-1">
-
-              <NavLink to="/activity" className={linkClass}>
-                <span className="flex items-center gap-2">
-                  🧭 Faoliyat log
-                </span>
-              </NavLink>
-
-              <NavLink to="/settings" className={linkClass}>
-                <span className="flex items-center gap-2">
-                  ⚙️ Sozlamalar
-                </span>
-              </NavLink>
-
-            </div>
-          </div>
-
-
-         {/* O‘YINLAR */}
+{/* TIZIM */}
 <div>
-  <p className="text-xs text-gray-400 mb-1 px-1">GAME ZONE</p>
+  <p className="text-xs text-gray-400 mb-1 px-1">Tizim</p>
   <div className="flex flex-col gap-1">
 
     <NavLink to="/activity" className={linkClass}>
       <span className="flex items-center gap-2">
-        🧭 Shashka
+        🧭 Faoliyat logi
+      </span>
+    </NavLink>
+
+    <NavLink to="/settings" className={linkClass}>
+      <span className="flex items-center gap-2">
+        ⚙️ Sozlamalar
+      </span>
+    </NavLink>
+
+  </div>
+</div>
+
+
+{/* O‘YINLAR */}
+<div>
+  <p className="text-xs text-gray-400 mb-1 px-1">O‘yinlar</p>
+  <div className="flex flex-col gap-1">
+
+    <NavLink to="/checkers" className={linkClass}>
+      <span className="flex items-center gap-2">
+        🎮 Shashka
       </span>
     </NavLink>
 
