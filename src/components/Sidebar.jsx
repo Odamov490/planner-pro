@@ -150,7 +150,7 @@ export default function Sidebar(){
           </div>
 {/* TIZIM */}
 <div>
-  <p className="text-xs text-gray-400 mb-1 px-1">TiZIM</p>
+  <p className="text-xs text-gray-400 mb-1 px-1">TIZIM</p>
   <div className="flex flex-col gap-1">
 
     <NavLink to="/activity" className={linkClass}>
