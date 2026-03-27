@@ -9,8 +9,9 @@ import {
   onSnapshot
 } from "firebase/firestore";
 
+// 🔥 BOARD (NULL YO‘Q)
 const createBoard = () => {
-  const board = Array(8).fill(null).map(()=>Array(8).fill(null));
+  const board = Array(8).fill("").map(()=>Array(8).fill(""));
 
   for(let i=0;i<3;i++){
     for(let j=0;j<8;j++){
@@ -36,11 +37,11 @@ export default function Checkers(){
   const [selected,setSelected] = useState(null);
   const [loading,setLoading] = useState(false);
 
-  // 🎮 CREATE GAME (FIXED)
+  // 🎮 CREATE GAME
   const createGame = async () => {
 
     if(!user){
-      alert("User topilmadi ❌ Login qiling");
+      alert("Login qiling ❌");
       return;
     }
 
@@ -52,20 +53,18 @@ export default function Checkers(){
       await setDoc(doc(db,"games",id),{
         board: createBoard(),
         player1: user.uid,
-        player2: null,
+        player2: "",
         turn: user.uid,
         status: "waiting",
-        winner: null
+        winner: ""
       });
-
-      console.log("Game created:", id);
 
       setGameId(id);
       alert("O‘yin yaratildi ✅ ID: " + id);
 
     } catch (err) {
-      console.error("CREATE ERROR:", err);
-      alert("Xatolik yuz berdi ❌");
+      console.error("ERROR:", err);
+      alert(err.message);
     } finally {
       setLoading(false);
     }
@@ -133,9 +132,9 @@ export default function Checkers(){
       const dir = myPiece === "w" ? -1 : 1;
 
       // oddiy yurish
-      if(dx === dir && Math.abs(dy) === 1 && !board[i][j]){
+      if(dx === dir && Math.abs(dy) === 1 && board[i][j] === ""){
         board[i][j] = piece;
-        board[selected.i][selected.j] = null;
+        board[selected.i][selected.j] = "";
       } else {
         return;
       }
@@ -172,7 +171,7 @@ export default function Checkers(){
 
       {/* GAME ID */}
       {gameId && (
-        <div className="text-sm text-green-600">
+        <div className="text-green-600 text-sm">
           Game ID: {gameId}
         </div>
       )}
@@ -196,10 +195,13 @@ export default function Checkers(){
 
       {/* STATUS */}
       {game && (
-        <div>
-          {game.turn === user.uid
-            ? "Siz yurishingiz kerak"
-            : "Raqib yurmoqda"}
+        <div className="text-sm">
+          {game.status === "waiting" && "Raqib kutilmoqda..."}
+          {game.status === "playing" && (
+            game.turn === user.uid
+              ? "Siz yurishingiz kerak"
+              : "Raqib yurmoqda"
+          )}
         </div>
       )}
 
@@ -221,7 +223,7 @@ export default function Checkers(){
                   `}
                 >
 
-                  {cell && (
+                  {cell !== "" && (
                     <div
                       className={`w-8 h-8 rounded-full
                         ${cell==="b" ? "bg-black" : "bg-white border"}
