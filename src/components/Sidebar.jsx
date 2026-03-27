@@ -81,6 +81,12 @@ export default function Sidebar(){
                 </span>
               </NavLink>
 
+              <NavLink to="/teams" className={linkClass}>
+                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
+                  👥 Jamoalar
+                </span>
+              </NavLink>
+
               <NavLink to="/company" className={linkClass}>
                 <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
                   🏢 Kompaniya
