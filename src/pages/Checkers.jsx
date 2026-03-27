@@ -2,7 +2,12 @@ import { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { db } from "../firebase";
 import {
-  doc, setDoc, getDoc, updateDoc, onSnapshot, increment
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot,
+  increment
 } from "firebase/firestore";
 
 const createBoard = () => {
@@ -10,13 +15,13 @@ const createBoard = () => {
 
   for(let i=0;i<3;i++){
     for(let j=0;j<8;j++){
-      if((i+j)%2===1) board[i*8+j] = "b";
+      if((i+j)%2===1) board[i*8 + j] = "b";
     }
   }
 
   for(let i=5;i<8;i++){
     for(let j=0;j<8;j++){
-      if((i+j)%2===1) board[i*8+j] = "w";
+      if((i+j)%2===1) board[i*8 + j] = "w";
     }
   }
 
@@ -30,16 +35,19 @@ export default function Checkers(){
   const [gameId,setGameId] = useState("");
   const [game,setGame] = useState(null);
   const [selected,setSelected] = useState(null);
-  const [moves,setMoves] = useState([]);
+  const [possibleMoves,setPossibleMoves] = useState([]);
 
-  // CREATE
-  const createGame = async ()=>{
+  // 🎮 CREATE
+  const createGame = async () => {
+
     const id = Date.now().toString();
 
     await setDoc(doc(db,"games",id),{
       board: createBoard(),
       player1: user.uid,
+      player1Email: user.email,
       player2: "",
+      player2Email: "",
       turn: user.uid,
       status: "waiting",
       winner: ""
@@ -48,102 +56,77 @@ export default function Checkers(){
     setGameId(id);
   };
 
-  // JOIN
-  const joinGame = async ()=>{
+  // 🤝 JOIN
+  const joinGame = async () => {
+
     const ref = doc(db,"games",gameId);
     const snap = await getDoc(ref);
+
     const data = snap.data();
 
     await updateDoc(ref,{
       player2: user.uid,
+      player2Email: user.email,
       status: "playing"
     });
   };
 
-  // REALTIME
+  // 🔄 REALTIME
   useEffect(()=>{
     if(!gameId) return;
+
     return onSnapshot(doc(db,"games",gameId),(snap)=>{
       setGame(snap.data());
     });
   },[gameId]);
 
-  // 🔥 MOVES LOGIC
+  // 🎯 POSSIBLE MOVES
   const getMoves = (i,j,board,piece) => {
 
-    const dirs = piece==="w" ? [-1] : [1];
-    if(piece.includes("k")) dirs.push(-dirs[0]);
+    const moves = [];
+    const dir = piece==="w" ? -1 : 1;
 
-    const res = [];
+    const left = {i:i+dir,j:j-1};
+    const right = {i:i+dir,j:j+1};
 
-    dirs.forEach(d=>{
-      [-1,1].forEach(side=>{
+    if(board[left.i*8 + left.j]==="") moves.push(left);
+    if(board[right.i*8 + right.j]==="") moves.push(right);
 
-        const ni = i+d;
-        const nj = j+side;
-
-        const idx = ni*8+nj;
-
-        if(board[idx]===""){
-          res.push({i:ni,j:nj});
-        }
-
-        // eat
-        const ei = i+d;
-        const ej = j+side;
-        const ti = i+d*2;
-        const tj = j+side*2;
-
-        const enemy = board[ei*8+ej];
-
-        if(enemy && enemy[0]!==piece[0] && board[ti*8+tj]===""){
-          res.push({i:ti,j:tj,eat:{i:ei,j:ej}});
-        }
-
-      });
-    });
-
-    return res;
+    return moves;
   };
 
-  // CLICK
-  const handleClick = async (i,j)=>{
+  // 🎯 CLICK
+  const handleClick = async (i,j) => {
 
-    if(!game || game.turn!==user.uid) return;
+    if(!game || game.status!=="playing") return;
+    if(game.turn !== user.uid) return;
 
     const board = [...game.board];
-    const idx = i*8+j;
 
-    const isP1 = user.uid===game.player1;
-    const myPiece = isP1 ? "b" : "w";
+    const index = i*8+j;
+
+    const isPlayer1 = user.uid===game.player1;
+    const myPiece = isPlayer1 ? "b" : "w";
 
     if(selected){
 
-      const move = moves.find(m=>m.i===i && m.j===j);
-      if(!move) return;
+      const valid = possibleMoves.find(m=>m.i===i && m.j===j);
+      if(!valid) return;
 
-      const fromIdx = selected.i*8+selected.j;
+      const selectedIndex = selected.i*8 + selected.j;
 
-      board[idx] = board[fromIdx];
-      board[fromIdx] = "";
+      board[index] = board[selectedIndex];
+      board[selectedIndex] = "";
 
-      // EAT
-      if(move.eat){
-        board[move.eat.i*8+move.eat.j] = "";
-      }
-
-      // DAMKA
-      if(myPiece==="w" && i===0) board[idx]="wk";
-      if(myPiece==="b" && i===7) board[idx]="bk";
-
-      // WIN
+      // 🏆 WIN CHECK
       const enemy = myPiece==="b" ? "w" : "b";
-      if(!board.some(c=>c.startsWith(enemy))){
+      if(!board.includes(enemy)){
         await updateDoc(doc(db,"games",gameId),{
           board,
-          winner:user.uid
+          winner: user.uid
         });
 
+        // 📊 STATS SAVE
         await updateDoc(doc(db,"users",user.uid),{
           wins: increment(1)
         });
@@ -157,25 +140,26 @@ export default function Checkers(){
       });
 
       setSelected(null);
-      setMoves([]);
+      setPossibleMoves([]);
 
     } else {
-      if(board[idx].startsWith(myPiece)){
+
+      if(board[index]===myPiece){
         setSelected({i,j});
-        setMoves(getMoves(i,j,board,board[idx]));
+        setPossibleMoves(getMoves(i,j,board,myPiece));
       }
     }
   };
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-6">
 
       <h1 className="text-3xl font-bold text-blue-600">
         ♟ PRO Shashka
       </h1>
 
       <button onClick={createGame} className="bg-blue-500 text-white px-4 py-2 rounded">
-        O‘yin yaratish
+        🎮 O‘yin yaratish
       </button>
 
       <div className="flex gap-2">
@@ -185,18 +169,28 @@ export default function Checkers(){
         </button>
       </div>
 
+      {/* 👥 PLAYERS */}
+      {game && (
+        <div className="text-sm space-y-1">
+          <div>👤 1: {game.player1Email}</div>
+          <div>👤 2: {game.player2Email || "kutilmoqda..."}</div>
+        </div>
+      )}
+
+      {/* STATUS */}
       {game && (
         <div>
           {game.winner
-            ? "🏆 G‘olib bor"
+            ? "🏆 G‘olib bor!"
             : game.turn===user.uid
               ? "Siz yurishingiz kerak"
               : "Raqib yurmoqda"}
         </div>
       )}
 
+      {/* BOARD */}
       {game && (
-        <div className="grid grid-cols-8 w-[400px]">
+        <div className="grid grid-cols-8 w-[400px] border">
 
           {game.board.map((cell,index)=>{
 
@@ -204,21 +198,24 @@ export default function Checkers(){
             const j = index%8;
 
             const isDark = (i+j)%2===1;
-            const isMove = moves.some(m=>m.i===i && m.j===j);
+
+            const isMove = possibleMoves.some(m=>m.i===i && m.j===j);
 
             return (
               <div
                 key={index}
                 onClick={()=>handleClick(i,j)}
-                className={`w-12 h-12 flex items-center justify-center
+                className={`w-12 h-12 flex items-center justify-center cursor-pointer
                   ${isDark ? "bg-gray-700" : "bg-gray-200"}
                   ${isMove ? "ring-4 ring-green-400" : ""}
                 `}
               >
-                {cell && (
+
+                {cell!=="" && (
                   <div className={`w-8 h-8 rounded-full
-                    ${cell.startsWith("b") ? "bg-black" : "bg-white border"}`} />
+                    ${cell==="b" ? "bg-black" : "bg-white border"}`} />
                 )}
+
               </div>
             );
           })}
