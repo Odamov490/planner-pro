@@ -8,7 +8,10 @@ import {
   where,
   updateDoc,
   doc,
-  arrayUnion
+  arrayUnion,
+  arrayRemove,
+  deleteDoc,
+  getDocs
 } from "firebase/firestore";
 
 export const TeamContext = createContext();
@@ -16,14 +19,17 @@ export const TeamContext = createContext();
 export function TeamProvider({ children }) {
 
   const [teams, setTeams] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
     let unsubscribe;
 
     const unsubAuth = auth.onAuthStateChanged((user) => {
 
-      if (!user) return;
+      if (!user) {
+        setTeams([]);
+        return;
+      }
 
       const q = query(
         collection(db, "teams"),
@@ -31,11 +37,17 @@ export function TeamProvider({ children }) {
       );
 
       unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
+
+        let data = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
+
+        // 🔥 SORT (yangilari tepada)
+        data = data.sort((a,b)=> b.created?.seconds - a.created?.seconds);
+
         setTeams(data);
+        setLoading(false);
       });
 
     });
@@ -60,18 +72,53 @@ export function TeamProvider({ children }) {
     });
   };
 
-  // 👤 ADD MEMBER
-  const addMember = async (teamId, userId) => {
+  // ✏️ RENAME
+  const renameTeam = async (id, name) => {
+    await updateDoc(doc(db, "teams", id), { name });
+  };
+
+  // ❌ DELETE TEAM
+  const deleteTeam = async (id) => {
+    await deleteDoc(doc(db, "teams", id));
+  };
+
+  // 👤 ADD MEMBER BY EMAIL
+  const addMemberByEmail = async (teamId, email) => {
+    const snap = await getDocs(collection(db, "users"));
+
+    const userDoc = snap.docs.find(d => d.data().email === email);
+
+    if (!userDoc) return alert("User topilmadi ❌");
+
     await updateDoc(doc(db, "teams", teamId), {
-      members: arrayUnion(userId)
+      members: arrayUnion(userDoc.data().uid)
+    });
+
+    alert("Qo‘shildi ✅");
+  };
+
+  // ❌ REMOVE MEMBER
+  const removeMember = async (teamId, userId) => {
+    await updateDoc(doc(db, "teams", teamId), {
+      members: arrayRemove(userId)
     });
   };
+
+  // 📊 COUNT
+  const totalTeams = teams.length;
 
   return (
     <TeamContext.Provider value={{
       teams,
+      loading,
+      totalTeams,
+
       createTeam,
-      addMember
+      renameTeam,
+      deleteTeam,
+
+      addMemberByEmail,
+      removeMember
     }}>
       {children}
     </TeamContext.Provider>
