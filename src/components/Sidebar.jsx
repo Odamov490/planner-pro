@@ -169,6 +169,21 @@ export default function Sidebar(){
             </div>
           </div>
 
+
+         {/* O‘YINLAR */}
+<div>
+  <p className="text-xs text-gray-400 mb-1 px-1">GAME ZONE</p>
+  <div className="flex flex-col gap-1">
+
+    <NavLink to="/activity" className={linkClass}>
+      <span className="flex items-center gap-2">
+        🧭 Shashka
+      </span>
+    </NavLink>
+
+  </div>
+</div>
+
         </div>
 
       </div>
