@@ -1,6 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import { db } from "../firebase";
 
-const initialBoard = () => {
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  onSnapshot
+} from "firebase/firestore";
+
+const createBoard = () => {
   const board = Array(8).fill(null).map(()=>Array(8).fill(null));
 
   for(let i=0;i<3;i++){
@@ -20,17 +30,75 @@ const initialBoard = () => {
 
 export default function Checkers(){
 
-  const [board,setBoard] = useState(initialBoard());
+  const { user } = useContext(AuthContext);
+
+  const [gameId,setGameId] = useState("");
+  const [game,setGame] = useState(null);
   const [selected,setSelected] = useState(null);
 
-  const handleClick = (i,j) => {
+  // 🔥 CREATE GAME
+  const createGame = async () => {
+
+    const id = Date.now().toString();
+
+    await setDoc(doc(db,"games",id),{
+      board: createBoard(),
+      player1: user.uid,
+      player2: null,
+      turn: user.uid,
+      status: "waiting"
+    });
+
+    setGameId(id);
+  };
+
+  // 🔥 JOIN GAME
+  const joinGame = async () => {
+
+    const ref = doc(db,"games",gameId);
+    const snap = await getDoc(ref);
+
+    if(!snap.exists()) return alert("Game yo‘q ❌");
+
+    await updateDoc(ref,{
+      player2: user.uid,
+      status: "playing"
+    });
+  };
+
+  // 🔥 REALTIME LISTENER
+  useEffect(()=>{
+
+    if(!gameId) return;
+
+    const unsub = onSnapshot(doc(db,"games",gameId),(snap)=>{
+      setGame(snap.data());
+    });
+
+    return ()=>unsub();
+
+  },[gameId]);
+
+  // 🔥 MOVE
+  const handleMove = async (i,j) => {
+
+    if(!game) return;
+
+    if(game.turn !== user.uid) return alert("Navbat sizda emas ❗");
+
+    const board = [...game.board.map(r=>[...r])];
 
     if(selected){
-      const newBoard = board.map(r=>[...r]);
-      newBoard[i][j] = board[selected.i][selected.j];
-      newBoard[selected.i][selected.j] = null;
-      setBoard(newBoard);
+      board[i][j] = board[selected.i][selected.j];
+      board[selected.i][selected.j] = null;
+
+      await updateDoc(doc(db,"games",gameId),{
+        board,
+        turn: user.uid === game.player1 ? game.player2 : game.player1
+      });
+
       setSelected(null);
+
     } else if(board[i][j]){
       setSelected({i,j});
     }
@@ -41,39 +109,67 @@ export default function Checkers(){
     <div className="p-6 space-y-6">
 
       <h1 className="text-3xl font-bold text-blue-600">
-        ♟ Shashka
+        ♟ Multiplayer Shashka
       </h1>
 
-      <div className="grid grid-cols-8 w-[400px]">
+      {/* CREATE */}
+      <button
+        onClick={createGame}
+        className="bg-blue-500 text-white px-4 py-2 rounded"
+      >
+        🎮 O‘yin yaratish
+      </button>
 
-        {board.map((row,i)=>
-          row.map((cell,j)=>{
+      {/* JOIN */}
+      <div className="flex gap-2">
+        <input
+          value={gameId}
+          onChange={(e)=>setGameId(e.target.value)}
+          placeholder="Game ID..."
+          className="border p-2 rounded"
+        />
 
-            const isDark = (i+j)%2===1;
-
-            return (
-              <div
-                key={i+"-"+j}
-                onClick={()=>handleClick(i,j)}
-                className={`w-12 h-12 flex items-center justify-center
-                  ${isDark ? "bg-gray-700" : "bg-gray-200"}
-                `}
-              >
-
-                {cell && (
-                  <div
-                    className={`w-8 h-8 rounded-full
-                      ${cell==="b" ? "bg-black" : "bg-white border"}
-                    `}
-                  />
-                )}
-
-              </div>
-            );
-          })
-        )}
-
+        <button
+          onClick={joinGame}
+          className="bg-green-500 text-white px-4 rounded"
+        >
+          Qo‘shilish
+        </button>
       </div>
+
+      {/* BOARD */}
+      {game && (
+        <div className="grid grid-cols-8 w-[400px]">
+
+          {game.board.map((row,i)=>
+            row.map((cell,j)=>{
+
+              const isDark = (i+j)%2===1;
+
+              return (
+                <div
+                  key={i+"-"+j}
+                  onClick={()=>handleMove(i,j)}
+                  className={`w-12 h-12 flex items-center justify-center
+                    ${isDark ? "bg-gray-700" : "bg-gray-200"}
+                  `}
+                >
+
+                  {cell && (
+                    <div
+                      className={`w-8 h-8 rounded-full
+                        ${cell==="b" ? "bg-black" : "bg-white border"}
+                      `}
+                    />
+                  )}
+
+                </div>
+              );
+            })
+          )}
+
+        </div>
+      )}
 
     </div>
   );
