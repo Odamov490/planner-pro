@@ -6,26 +6,22 @@ import {
   setDoc,
   getDoc,
   updateDoc,
-  onSnapshot
+  onSnapshot,
+  increment
 } from "firebase/firestore";
 
-// 🔥 1D BOARD
 const createBoard = () => {
   const board = Array(64).fill("");
 
   for(let i=0;i<3;i++){
     for(let j=0;j<8;j++){
-      if((i+j)%2===1){
-        board[i*8 + j] = "b";
-      }
+      if((i+j)%2===1) board[i*8 + j] = "b";
     }
   }
 
   for(let i=5;i<8;i++){
     for(let j=0;j<8;j++){
-      if((i+j)%2===1){
-        board[i*8 + j] = "w";
-      }
+      if((i+j)%2===1) board[i*8 + j] = "w";
     }
   }
 
@@ -39,57 +35,38 @@ export default function Checkers(){
   const [gameId,setGameId] = useState("");
   const [game,setGame] = useState(null);
   const [selected,setSelected] = useState(null);
-  const [loading,setLoading] = useState(false);
+  const [possibleMoves,setPossibleMoves] = useState([]);
 
-  // 🎮 CREATE GAME
+  // 🎮 CREATE
   const createGame = async () => {
 
-    if(!user){
-      alert("Login qiling ❌");
-      return;
-    }
+    const id = Date.now().toString();
 
-    try {
-      setLoading(true);
+    await setDoc(doc(db,"games",id),{
+      board: createBoard(),
+      player1: user.uid,
+      player1Email: user.email,
+      player2: "",
+      player2Email: "",
+      turn: user.uid,
+      status: "waiting",
+      winner: ""
+    });
 
-      const id = Date.now().toString();
-
-      await setDoc(doc(db,"games",id),{
-        board: createBoard(),
-        player1: user.uid,
-        player2: "",
-        turn: user.uid,
-        status: "waiting",
-        winner: ""
-      });
-
-      setGameId(id);
-      alert("O‘yin yaratildi ✅ ID: " + id);
-
-    } catch (err) {
-      console.error(err);
-      alert(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setGameId(id);
   };
 
   // 🤝 JOIN
   const joinGame = async () => {
 
-    if(!gameId) return alert("ID kiriting");
-
     const ref = doc(db,"games",gameId);
     const snap = await getDoc(ref);
 
-    if(!snap.exists()) return alert("Topilmadi ❌");
-
     const data = snap.data();
-
-    if(data.player2) return alert("Band ❗");
 
     await updateDoc(ref,{
       player2: user.uid,
+      player2Email: user.email,
       status: "playing"
     });
   };
@@ -98,59 +75,78 @@ export default function Checkers(){
   useEffect(()=>{
     if(!gameId) return;
 
-    const unsub = onSnapshot(doc(db,"games",gameId),(snap)=>{
+    return onSnapshot(doc(db,"games",gameId),(snap)=>{
       setGame(snap.data());
     });
-
-    return ()=>unsub();
   },[gameId]);
 
-  // 🎯 MOVE
-  const handleMove = async (i,j) => {
+  // 🎯 POSSIBLE MOVES
+  const getMoves = (i,j,board,piece) => {
+
+    const moves = [];
+    const dir = piece==="w" ? -1 : 1;
+
+    const left = {i:i+dir,j:j-1};
+    const right = {i:i+dir,j:j+1};
+
+    if(board[left.i*8 + left.j]==="") moves.push(left);
+    if(board[right.i*8 + right.j]==="") moves.push(right);
+
+    return moves;
+  };
+
+  // 🎯 CLICK
+  const handleClick = async (i,j) => {
 
     if(!game || game.status!=="playing") return;
-
     if(game.turn !== user.uid) return;
 
     const board = [...game.board];
 
-    const index = i*8 + j;
+    const index = i*8+j;
 
-    const isPlayer1 = user.uid === game.player1;
+    const isPlayer1 = user.uid===game.player1;
     const myPiece = isPlayer1 ? "b" : "w";
 
     if(selected){
 
+      const valid = possibleMoves.find(m=>m.i===i && m.j===j);
+      if(!valid) return;
+
       const selectedIndex = selected.i*8 + selected.j;
-      const piece = board[selectedIndex];
 
-      if(piece !== myPiece){
-        setSelected(null);
-        return;
-      }
+      board[index] = board[selectedIndex];
+      board[selectedIndex] = "";
 
-      const dx = i - selected.i;
-      const dy = j - selected.j;
-      const dir = myPiece === "w" ? -1 : 1;
+      // 🏆 WIN CHECK
+      const enemy = myPiece==="b" ? "w" : "b";
+      if(!board.includes(enemy)){
+        await updateDoc(doc(db,"games",gameId),{
+          board,
+          winner: user.uid
+        });
 
-      // oddiy yurish
-      if(dx === dir && Math.abs(dy) === 1 && board[index] === ""){
-        board[index] = piece;
-        board[selectedIndex] = "";
-      } else {
+        // 📊 STATS SAVE
+        await updateDoc(doc(db,"users",user.uid),{
+          wins: increment(1)
+        });
+
         return;
       }
 
       await updateDoc(doc(db,"games",gameId),{
         board,
-        turn: user.uid === game.player1 ? game.player2 : game.player1
+        turn: user.uid===game.player1 ? game.player2 : game.player1
       });
 
       setSelected(null);
+      setPossibleMoves([]);
 
     } else {
-      if(board[index] === myPiece){
+
+      if(board[index]===myPiece){
         setSelected({i,j});
+        setPossibleMoves(getMoves(i,j,board,myPiece));
       }
     }
   };
@@ -159,51 +155,36 @@ export default function Checkers(){
     <div className="p-6 space-y-6">
 
       <h1 className="text-3xl font-bold text-blue-600">
-        ♟ Multiplayer Shashka
+        ♟ PRO Shashka
       </h1>
 
-      {/* CREATE */}
-      <button
-        onClick={createGame}
-        disabled={loading}
-        className="bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        {loading ? "..." : "🎮 O‘yin yaratish"}
+      <button onClick={createGame} className="bg-blue-500 text-white px-4 py-2 rounded">
+        🎮 O‘yin yaratish
       </button>
 
-      {/* ID */}
-      {gameId && (
-        <div className="text-green-600 text-sm">
-          Game ID: {gameId}
-        </div>
-      )}
-
-      {/* JOIN */}
       <div className="flex gap-2">
-        <input
-          value={gameId}
-          onChange={(e)=>setGameId(e.target.value)}
-          placeholder="Game ID..."
-          className="border p-2 rounded"
-        />
-
-        <button
-          onClick={joinGame}
-          className="bg-green-500 text-white px-4 rounded"
-        >
+        <input value={gameId} onChange={(e)=>setGameId(e.target.value)} className="border p-2"/>
+        <button onClick={joinGame} className="bg-green-500 text-white px-4">
           Qo‘shilish
         </button>
       </div>
 
+      {/* 👥 PLAYERS */}
+      {game && (
+        <div className="text-sm space-y-1">
+          <div>👤 1: {game.player1Email}</div>
+          <div>👤 2: {game.player2Email || "kutilmoqda..."}</div>
+        </div>
+      )}
+
       {/* STATUS */}
       {game && (
-        <div className="text-sm">
-          {game.status === "waiting" && "Raqib kutilmoqda..."}
-          {game.status === "playing" && (
-            game.turn === user.uid
+        <div>
+          {game.winner
+            ? "🏆 G‘olib bor!"
+            : game.turn===user.uid
               ? "Siz yurishingiz kerak"
-              : "Raqib yurmoqda"
-          )}
+              : "Raqib yurmoqda"}
         </div>
       )}
 
@@ -214,25 +195,25 @@ export default function Checkers(){
           {game.board.map((cell,index)=>{
 
             const i = Math.floor(index/8);
-            const j = index % 8;
+            const j = index%8;
 
             const isDark = (i+j)%2===1;
+
+            const isMove = possibleMoves.some(m=>m.i===i && m.j===j);
 
             return (
               <div
                 key={index}
-                onClick={()=>handleMove(i,j)}
+                onClick={()=>handleClick(i,j)}
                 className={`w-12 h-12 flex items-center justify-center cursor-pointer
                   ${isDark ? "bg-gray-700" : "bg-gray-200"}
+                  ${isMove ? "ring-4 ring-green-400" : ""}
                 `}
               >
 
-                {cell !== "" && (
-                  <div
-                    className={`w-8 h-8 rounded-full
-                      ${cell==="b" ? "bg-black" : "bg-white border"}
-                    `}
-                  />
+                {cell!=="" && (
+                  <div className={`w-8 h-8 rounded-full
+                    ${cell==="b" ? "bg-black" : "bg-white border"}`} />
                 )}
 
               </div>
