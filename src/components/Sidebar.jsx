@@ -75,12 +75,6 @@ export default function Sidebar(){
             <p className="text-xs text-gray-400 mb-1 px-1">JAMOA</p>
             <div className="flex flex-col gap-1">
 
-              <NavLink to="/team" className={linkClass}>
-                <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
-                  👥 Jamoa
-                </span>
-              </NavLink>
-
               <NavLink to="/teams" className={linkClass}>
                 <span className="flex items-center gap-2 group-hover:translate-x-1 transition">
                   👥 Jamoalar
