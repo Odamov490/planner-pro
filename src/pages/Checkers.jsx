@@ -426,7 +426,7 @@ export default function Checkers() {
   const [boardRotated, setBoardRotated]         = useState(false);
 
   const myColor = useCallback(
-    () => (game?.player1 === user?.uid ? "b" : "w"),
+    () => (game?.player1 === user?.uid ? "w" : "b"),
     [game, user]
   );
 
