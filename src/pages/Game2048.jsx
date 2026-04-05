@@ -272,7 +272,9 @@ const SettingsModal = ({ visible, onClose, themeIdx, setThemeIdx }) => {
 // ═══════════════════════════════════════════════════════════════
 const Tile = ({ value, isNew, isMerged }) => {
   const s   = getTileStyle(value);
-  const fs  = value >= 1024 ? 20 : value >= 128 ? 24 : 28;
+  const fs = value
+  ? `${Math.max(18, 60 - value.toString().length * 10)}px`
+  : 0;
 
   return (
     <div style={{
