@@ -270,46 +270,113 @@ const SettingsModal = ({ visible, onClose, themeIdx, setThemeIdx }) => {
 // ═══════════════════════════════════════════════════════════════
 // TILE COMPONENT
 // ═══════════════════════════════════════════════════════════════
-const Tile = ({ value, isNew, isMerged }) => {
-  const s = getTileStyle(value);
+// ═══════════════════════════════════════════════════════════════
+// TILE CONFIG
+// ═══════════════════════════════════════════════════════════════
+const TILE_CONFIG = {
+  0:    { bg: "transparent",  text: "transparent",  fs: 0    },
+  2:    { bg: "#FAEEDA",      text: "#412402",       fs: 36   },
+  4:    { bg: "#FAC775",      text: "#412402",       fs: 36   },
+  8:    { bg: "#EF9F27",      text: "#412402",       fs: 36   },
+  16:   { bg: "#BA7517",      text: "#FAEEDA",       fs: 34   },
+  32:   { bg: "#D85A30",      text: "#FAECE7",       fs: 34   },
+  64:   { bg: "#993C1D",      text: "#F5C4B3",       fs: 34   },
+  128:  { bg: "#5DCAA5",      text: "#04342C",       fs: 30   },
+  256:  { bg: "#1D9E75",      text: "#E1F5EE",       fs: 30   },
+  512:  { bg: "#0F6E56",      text: "#9FE1CB",       fs: 30   },
+  1024: { bg: "#085041",      text: "#9FE1CB",       fs: 24   },
+  2048: { bg: "#534AB7",      text: "#CECBF6",       fs: 24   },
+  4096: { bg: "#3C3489",      text: "#EEEDFE",       fs: 22   },
+  8192: { bg: "#26215C",      text: "#CECBF6",       fs: 20   },
+};
 
-  // 🔥 Dynamic font-size (katakni maksimal to‘ldiradi)
-  const fs = value
-    ? `${Math.max(28, 90 - value.toString().length * 14)}px`
-    : 0;
+const getTileConfig = (val) =>
+  TILE_CONFIG[val] || { bg: "#1a1240", text: "#AFA9EC", fs: 18 };
+
+// ═══════════════════════════════════════════════════════════════
+// TILE COMPONENT
+// ═══════════════════════════════════════════════════════════════
+const Tile = ({ value, isNew, isMerged }) => {
+  if (!value) {
+    return (
+      <div style={{
+        width: "100%", height: "100%",
+        borderRadius: 14,
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}/>
+    );
+  }
+
+  const { bg, text, fs } = getTileConfig(value);
+  const isHighTile = value >= 2048;
+  const isMega     = value >= 1024;
+
+  const anim = isNew
+    ? "tileAppear 0.22s cubic-bezier(0.34,1.56,0.64,1) both"
+    : isMerged
+    ? "tilePop 0.25s cubic-bezier(0.34,1.56,0.64,1) both"
+    : "none";
 
   return (
-    <div
-      style={{
-        width: "100%",          // 🔥 qo‘shildi
-        height: "100%",         // 🔥 qo‘shildi
+    <div style={{
+      width: "100%", height: "100%",
+      borderRadius: 14,
+      background: bg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontWeight: 800,
+      fontSize: fs,
+      lineHeight: 1,
+      letterSpacing: "-0.03em",
+      color: text,
+      animation: anim,
+      position: "relative",
+      overflow: "hidden",
+      transition: "transform 0.15s cubic-bezier(0.34,1.56,0.64,1)",
+    }}>
 
-        background: value ? s.bg : "transparent",
-        border: value ? "none" : "1px solid rgba(255,255,255,0.06)",
-        borderRadius: 10,
+      {/* Yuqori chap gloss */}
+      <div style={{
+        position: "absolute",
+        top: 8, left: 12,
+        width: "40%", height: "28%",
+        borderRadius: "50%",
+        background: "rgba(255,255,255,0.18)",
+        filter: "blur(3px)",
+        pointerEvents: "none",
+      }}/>
 
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+      {/* 1024+ uchun "x2" badge */}
+      {isMerged && isMega && (
+        <div style={{
+          position: "absolute",
+          top: 7, right: 9,
+          fontSize: 9,
+          fontWeight: 700,
+          background: "rgba(255,255,255,0.22)",
+          color: "rgba(255,255,255,0.9)",
+          borderRadius: 6,
+          padding: "1px 5px",
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+        }}>x2</div>
+      )}
 
-        fontWeight: 700,        // 🔥 biroz qalinroq
-        fontSize: fs,
-        lineHeight: 1,          // 🔥 qo‘shildi (markazlash uchun)
+      {/* 2048+ uchun toj belgisi */}
+      {isHighTile && (
+        <div style={{
+          position: "absolute",
+          top: 6, left: 9,
+          fontSize: 11,
+          opacity: 0.7,
+          lineHeight: 1,
+        }}>✦</div>
+      )}
 
-        color: value ? s.text : "transparent",
-
-        transition: "background 0.1s ease",
-
-        animation: isNew
-          ? "tileAppear 0.18s cubic-bezier(0.34,1.56,0.64,1)"
-          : isMerged
-          ? "tilePop 0.2s cubic-bezier(0.34,1.56,0.64,1)"
-          : "none",
-
-        position: "relative",
-      }}
-    >
-      {value > 0 ? value.toLocaleString() : ""}
+      {/* Raqam */}
+      {value.toLocaleString()}
     </div>
   );
 };
@@ -690,6 +757,17 @@ export default function Game2048() {
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:10px; }
         * { box-sizing:border-box; }
+
+
+        @keyframes tileAppear {
+  from { transform: scale(0) rotate(-8deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+}
+@keyframes tilePop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
       `}</style>
     </div>
   );
