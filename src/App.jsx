@@ -14,7 +14,7 @@ import Outgoing from "./pages/Outgoing";
 import Notifications from "./pages/Notifications";
 import Teams from "./pages/Teams";
 import Checkers from "./pages/Checkers";
-import
+import Chess from "./pages/Chess";
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
   const { user } = useContext(AuthContext);
