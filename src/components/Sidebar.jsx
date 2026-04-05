@@ -185,6 +185,11 @@ export default function Sidebar(){
         ♟️ Shaxmat
       </span>
     </NavLink>
+    <NavLink to="/2048" className={linkClass}>
+  <span className="flex items-center gap-2">
+    🔢 2048
+  </span>
+</NavLink>
 
   </div>
 </div>
