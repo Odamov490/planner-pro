@@ -686,7 +686,7 @@ export default function Checkers() {
   const executeMove = async (move) => {
     const board    = [...game.board];
     const history  = [...(game.history  || [])];
-    const captured = { ...(game.captured || { w:0, b:0 }) };
+    const captured = { ...(game.captured || { b:0, w:0 }) };
     const color    = myColor();
 
     const notation = moveNotation(move, board);
