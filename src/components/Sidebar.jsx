@@ -180,6 +180,12 @@ export default function Sidebar(){
       </span>
     </NavLink>
 
+    <NavLink to="/chess" className={linkClass}>
+      <span className="flex items-center gap-2">
+        ♟️ Shaxmat
+      </span>
+    </NavLink>
+
   </div>
 </div>
 

@@ -14,6 +14,7 @@ import Outgoing from "./pages/Outgoing";
 import Notifications from "./pages/Notifications";
 import Teams from "./pages/Teams";
 import Checkers from "./pages/Checkers";
+import
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
   const { user } = useContext(AuthContext);
@@ -35,6 +36,7 @@ function AppRoutes(){
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/checkers" element={<Checkers />} />
+          <Route path="/chess" element={<Chess />} />
         </Routes>
       </div>
     </div>
