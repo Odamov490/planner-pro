@@ -617,7 +617,7 @@ export default function Checkers() {
       player2Side:  chosenSide === "b" ? "w" : "b",
       player1Rating: myRating,
       player2Rating: 1000,
-      turn:   "b",        // qora har doim boshlaydi (shashka qoidasi)
+      turn:   "w",        // qora har doim boshlaydi (shashka qoidasi)
       status: "waiting",
       winner: "",
       moveCount: 0,
@@ -686,7 +686,7 @@ export default function Checkers() {
   const executeMove = async (move) => {
     const board    = [...game.board];
     const history  = [...(game.history  || [])];
-    const captured = { ...(game.captured || { b:0, w:0 }) };
+    const captured = { ...(game.captured || { w:0, b:0 }) };
     const color    = myColor();
 
     const notation = moveNotation(move, board);
