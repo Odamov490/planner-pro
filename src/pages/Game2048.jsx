@@ -271,28 +271,48 @@ const SettingsModal = ({ visible, onClose, themeIdx, setThemeIdx }) => {
 // TILE COMPONENT
 // ═══════════════════════════════════════════════════════════════
 const Tile = ({ value, isNew, isMerged }) => {
-  const s   = getTileStyle(value);
+  const s = getTileStyle(value);
+
+  // 🔥 Dynamic font-size (katakni maksimal to‘ldiradi)
   const fs = value
-  ? `${Math.max(18, 60 - value.toString().length * 22)}px`
-  : 0;
+    ? `${Math.max(28, 90 - value.toString().length * 14)}px`
+    : 0;
 
   return (
-    <div style={{
-      background: value ? s.bg : "transparent",
-      border: value ? "none" : "1px solid rgba(255,255,255,0.06)",
-      borderRadius: 10,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontWeight: 500, fontSize: fs, color: value ? s.text : "transparent",
-      transition: "background 0.1s ease",
-      animation: isNew ? "tileAppear 0.18s cubic-bezier(0.34,1.56,0.64,1)" :
-                 isMerged ? "tilePop 0.2s cubic-bezier(0.34,1.56,0.64,1)" : "none",
-      position: "relative",
-    }}>
+    <div
+      style={{
+        width: "100%",          // 🔥 qo‘shildi
+        height: "100%",         // 🔥 qo‘shildi
+
+        background: value ? s.bg : "transparent",
+        border: value ? "none" : "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 10,
+
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+
+        fontWeight: 700,        // 🔥 biroz qalinroq
+        fontSize: fs,
+        lineHeight: 1,          // 🔥 qo‘shildi (markazlash uchun)
+
+        color: value ? s.text : "transparent",
+
+        transition: "background 0.1s ease",
+
+        animation: isNew
+          ? "tileAppear 0.18s cubic-bezier(0.34,1.56,0.64,1)"
+          : isMerged
+          ? "tilePop 0.2s cubic-bezier(0.34,1.56,0.64,1)"
+          : "none",
+
+        position: "relative",
+      }}
+    >
       {value > 0 ? value.toLocaleString() : ""}
     </div>
   );
 };
-
 // ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
