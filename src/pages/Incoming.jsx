@@ -393,8 +393,14 @@ const IncomingCard = ({
             }}>👥 {task.teamName}</span>
           ) : null}
 
-          {/* Yuboruvchi */}
-          {task.createdByEmail && (
+          {/* Yuboruvchi yoki o'zim */}
+          {task._isSelf ? (
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: "2px 9px", borderRadius: 999,
+              background: "#f5f3ff", color: "#7c3aed",
+              border: "1px solid #ede9fe",
+            }}>📝 O'z eslatmam</span>
+          ) : task.createdByEmail ? (
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <Avatar email={task.createdByEmail} size={18}/>
               <span style={{ fontSize: 11, color: "#9ca3af" }}>
@@ -403,7 +409,7 @@ const IncomingCard = ({
                 </b>{" "}tomonidan
               </span>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Right actions — qabul/rad tugmalari */}
@@ -473,6 +479,7 @@ const SenderGroup = ({ email, tasks, states }) => {
   const pct      = total ? Math.round((done / total) * 100) : 0;
   const accepted = tasks.filter(t => states[t.id] === "accepted").length;
   const isTeam   = email?.startsWith("👥");
+  const isSelf   = email?.startsWith("📝");
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -482,13 +489,19 @@ const SenderGroup = ({ email, tasks, states }) => {
           background: "#ede9fe", border: "2px solid #ddd6fe",
           display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
         }}>👥</div>
+      ) : isSelf ? (
+        <div style={{
+          width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+          background: "#f5f3ff", border: "2px solid #ede9fe",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+        }}>📝</div>
       ) : (
         <Avatar email={email} size={28}/>
       )}
       <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
-        {isTeam ? email : email?.split("@")[0]}
+        {(isTeam || isSelf) ? email : email?.split("@")[0]}
       </span>
-      {!isTeam && <span style={{ fontSize: 11, color: "#9ca3af" }}>{email}</span>}
+      {!isTeam && !isSelf && <span style={{ fontSize: 11, color: "#9ca3af" }}>{email}</span>}
       <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }}/>
       <span style={{ fontSize: 10, color: "#9ca3af" }}>
         {accepted}/{total} qabul qilindi
@@ -523,18 +536,23 @@ export default function Incoming() {
   const { tasks } = useContext(TaskContext);
   const { user }  = useContext(AuthContext);
 
-  // Menga boshqalar bergan + jamoa vazifalari (Outgoing bilan simmetrik)
+  // Menga kelgan barcha vazifalar:
+  //  1. Boshqa birov menga yuborgan (shaxsiy)
+  //  2. O'zim o'zimga bergan (zametka / eslatma)
+  //  3. Men a'zosi bo'lgan jamoa vazifalari (boshqa yuborgan)
   const incoming = useMemo(() => {
     const seen = new Set();
     const result = [];
     tasks.forEach(t => {
       if (t.archived) return;
-      // Shaxsiy: menga boshqa birov yuborgan
+
+      // Shaxsiy: assignedTo men, teamId yo'q
+      // (o'zim o'zimga berganda ham userId === user.uid bo'ladi — ruxsat beramiz)
       const isPersonal =
         t.assignedTo === user?.uid &&
-        t.userId !== user?.uid &&
         !t.teamId;
-      // Jamoa: men a'zosi bo'lgan jamoa vazifalari
+
+      // Jamoa: men a'zo, va boshqa birov yaratgan
       const isTeam =
         !!t.teamId &&
         t.userId !== user?.uid &&
@@ -542,7 +560,13 @@ export default function Incoming() {
 
       if ((isPersonal || isTeam) && !seen.has(t.id)) {
         seen.add(t.id);
-        result.push({ ...t, _kind: isTeam ? "team" : "personal" });
+        // O'zim o'zimga bergan — "personal_self" kind
+        const isSelf = t.assignedTo === user?.uid && t.userId === user?.uid;
+        result.push({
+          ...t,
+          _kind:    isTeam ? "team" : "personal",
+          _isSelf:  isSelf,
+        });
       }
     });
     return result;
@@ -594,7 +618,8 @@ export default function Incoming() {
   const senders = useMemo(() => {
     const s = new Set();
     incoming.forEach(t => {
-      if (t.teamId) s.add(`👥 ${t.teamName || "Jamoa"}`);
+      if (t.teamId)         s.add(`👥 ${t.teamName || "Jamoa"}`);
+      else if (t._isSelf)   s.add("📝 O'z eslatmalar");
       else if (t.createdByEmail) s.add(t.createdByEmail);
     });
     return [...s];
@@ -623,11 +648,13 @@ export default function Incoming() {
     }
     if (filterKind !== "all") {
       if (filterKind === "team")     list = list.filter(t => !!t.teamId);
-      if (filterKind === "personal") list = list.filter(t => !t.teamId);
+      if (filterKind === "self")     list = list.filter(t => !!t._isSelf);
+      if (filterKind === "personal") list = list.filter(t => !t.teamId && !t._isSelf);
     }
     if (filterSender !== "all") {
       list = list.filter(t => {
-        if (t.teamId) return `👥 ${t.teamName || "Jamoa"}` === filterSender;
+        if (t.teamId)   return `👥 ${t.teamName || "Jamoa"}` === filterSender;
+        if (t._isSelf)  return "📝 O'z eslatmalar" === filterSender;
         return t.createdByEmail === filterSender;
       });
     }
@@ -663,7 +690,9 @@ export default function Incoming() {
     filtered.forEach(t => {
       const k = t.teamId
         ? `👥 ${t.teamName || "Jamoa"}`
-        : (t.createdByEmail || "Noma'lum");
+        : t._isSelf
+          ? "📝 O'z eslatmalar"
+          : (t.createdByEmail || "Noma'lum");
       if (!m[k]) m[k] = [];
       m[k].push(t);
     });
@@ -756,9 +785,10 @@ export default function Incoming() {
             {/* ── KIND TABS — Outgoing bilan aynan bir xil ── */}
             <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
               {[
-                { v: "all",      l: "Barchasi",   count: incoming.length },
-                { v: "personal", l: "👤 Shaxsiy", count: incoming.filter(t => !t.teamId).length },
-                { v: "team",     l: "👥 Jamoa",   count: incoming.filter(t => !!t.teamId).length },
+                { v: "all",      l: "Barchasi",    count: incoming.length },
+                { v: "personal", l: "👤 Boshqalar", count: incoming.filter(t => !t.teamId && !t._isSelf).length },
+                { v: "self",     l: "📝 O'zim",    count: incoming.filter(t => !!t._isSelf).length },
+                { v: "team",     l: "👥 Jamoa",    count: incoming.filter(t => !!t.teamId).length },
               ].map(k => (
                 <button key={k.v} onClick={() => setFilterKind(k.v)} style={{
                   padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer",
@@ -863,7 +893,7 @@ export default function Incoming() {
                       <option value="all">👤 Barcha yuboruvchilar</option>
                       {senders.map(s => (
                         <option key={s} value={s}>
-                          {s.startsWith("👥") ? s : s.split("@")[0]}
+                          {(s.startsWith("👥") || s.startsWith("📝")) ? s : s.split("@")[0]}
                         </option>
                       ))}
                     </select>
