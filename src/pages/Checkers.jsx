@@ -604,7 +604,7 @@ export default function Checkers() {
 
   // ── CREATE ──
   const createGame = async () => {
-    const id = `sh_${Date.now()}`;
+    const id = `shashka_${Date.now()}`;
     await setDoc(doc(db, "shashka_games", id), {
       board:        INITIAL_BOARD(),
       player1:      user.uid,
