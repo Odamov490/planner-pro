@@ -620,7 +620,7 @@ function buildLetterPool(words) {
   }
 
   // Shuffle and assign unique ids
-  return shuffleArray(pool.slice(0, 10)).map((letter, i) => ({ letter, id: i }));
+  return shuffleArray(pool).map((letter, i) => ({ letter, id: i }));
 }
 
 // ═══════════════════════════════════════════════════════════════
