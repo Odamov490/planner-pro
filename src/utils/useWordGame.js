@@ -2,7 +2,7 @@
 // useWordGame — barcha o'yin logikasi shu yerda
 // ═══════════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CATEGORIES, WORDS, getWordsByCategory, getLettersForWords } from "./data/words";
+import { CATEGORIES, WORDS, getWordsByCategory, getLettersForWords } from "./utils/words";
 
 const STORAGE_KEY = "wordgame_v2";
 
