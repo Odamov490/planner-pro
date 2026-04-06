@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
-import useWordGame from "./hooks/useWordGame";
-import { CATEGORIES } from "./data/words";
+import useWordGame from "./utils/useWordGame";
+import { CATEGORIES } from "./utils/words";
 
 // ═══════════════════════════════════════════════════════════════
 // STYLE CONSTANTS
