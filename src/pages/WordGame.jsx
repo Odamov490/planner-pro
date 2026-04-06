@@ -17,7 +17,6 @@ const STATUS_CONFIG = {
 };
 
 // ─── LETTER CIRCLE ────────────────────────────────────────────
-// Places letters in a circle with SVG lines connecting selected ones
 const LetterCircle = ({ letters, selected, onSelect, hintedLetters, catColor, status }) => {
   const svgRef  = useRef(null);
   const btnRefs = useRef({});
@@ -136,9 +135,7 @@ const WordSlots = ({ targetWords, foundWords, catColor, catBg }) => {
       {targetWords.map((w, i) => {
         const found = foundWords.includes(w.word);
         return (
-          <div key={i} style={{
-            display:"flex", gap:3, alignItems:"center",
-          }}>
+          <div key={i} style={{ display:"flex", gap:3, alignItems:"center" }}>
             {w.word.split("").map((ch, ci) => (
               <div key={ci} style={{
                 width:32, height:38,
@@ -273,7 +270,7 @@ const CategoryMenu = ({ active, onChange, scores }) => (
         }}>
           <span>{cat.icon}</span>
           <span>{cat.label}</span>
-          {scores[cat.id] > 0 && (
+          {scores && scores[cat.id] > 0 && (
             <span style={{
               fontSize:10, fontWeight:900,
               background: isActive ? "rgba(255,255,255,0.25)" : cat.color+"15",
@@ -395,11 +392,11 @@ export default function WordGame() {
   const [showScorePopup,   setShowScorePopup]   = useState(false);
 
   const {
-    activeCatInfo: cat,
+    activeCat, activeCatInfo: cat,
     level, letters, targetWords, foundWords,
     selected, status, allFound, totalScore, streak,
-    scores, hintsLeft, hintedLetters, dailyDone, dailyCatInfo,
-    currentWord, CATEGORIES,
+    scores, hintsLeft, hintedLetters, dailyDone,
+    currentWord, analytics,
     changeCategory, selectLetter, shuffle,
     submitWord, removeLast, clearSelected,
     nextLevel, useHint, startDailyChallenge,
@@ -411,9 +408,10 @@ export default function WordGame() {
       const pts = currentWord.length * 10 + (currentWord.length > 5 ? 20 : 0);
       setLastCorrectScore(pts);
       setShowScorePopup(true);
-      setTimeout(() => setShowScorePopup(false), 1000);
+      const t = setTimeout(() => setShowScorePopup(false), 1000);
+      return () => clearTimeout(t);
     }
-  }, [status]);
+  }, [status, currentWord]);
 
   if (!cat) return null;
 
@@ -512,7 +510,7 @@ export default function WordGame() {
         </div>
 
         {/* ── CATEGORY MENU ── */}
-        <div style={{ marginBottom:16 }}>
+        <div style={{ marginBottom:16 }}></div>
           <CategoryMenu active={game.activeCat} onChange={changeCategory} scores={scores}/>
         </div>
 
@@ -688,7 +686,7 @@ export default function WordGame() {
         )}
 
       </div>
-    </div>
+    
   );
 }
 
