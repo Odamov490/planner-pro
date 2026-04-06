@@ -1,698 +1,569 @@
-import { NavLink, useLocation } from "react-router-dom";
-import { useContext, useState, useEffect, useRef } from "react";
+import { NavLink } from "react-router-dom";
+import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { TaskContext } from "../context/TaskContext";
 import { NotificationContext } from "../context/NotificationContext";
 
-// ─── Icon Components ───────────────────────────────────────────────
-const Icon = ({ children, className = "" }) => (
-  <span className={`text-base leading-none select-none ${className}`}>{children}</span>
-);
-
-const ChevronIcon = ({ collapsed }) => (
-  <svg
-    className={`w-4 h-4 transition-transform duration-500 ease-in-out ${collapsed ? "rotate-180" : ""}`}
-    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-  </svg>
-);
-
-const SunIcon = () => (
-  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-    <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-  </svg>
-);
-
-// ─── Nav Sections ───────────────────────────────────────────────────
-const NAV_SECTIONS = [
+/* ─────────────────────────────────────────────────────────────
+   NAV CONFIG
+───────────────────────────────────────────────────────────── */
+const NAV = [
   {
-    label: "ASOSIY",
+    group: "Asosiy",
     items: [
-      { to: "/",           icon: "⬡",  label: "Dashboard"       },
-      { to: "/tasks",      icon: "◈",  label: "Vazifalar"       },
-      { to: "/calendar",   icon: "◫",  label: "Kalendar"        },
+      { to: "/",              icon: HomeIcon,     label: "Dashboard"          },
+      { to: "/tasks",         icon: TaskIcon,     label: "Vazifalar"          },
+      { to: "/calendar",      icon: CalIcon,      label: "Kalendar"           },
     ],
   },
   {
-    label: "JAMOA",
+    group: "Jamoa",
     items: [
-      { to: "/teams",      icon: "◎",  label: "Jamoalar"        },
-      { to: "/company",    icon: "▣",  label: "Kompaniya"       },
-      { to: "/invites",    icon: "◈",  label: "Takliflar"       },
+      { to: "/teams",         icon: TeamsIcon,    label: "Jamoalar"           },
+      { to: "/company",       icon: CompanyIcon,  label: "Kompaniya"          },
+      { to: "/invites",       icon: InviteIcon,   label: "Takliflar"          },
     ],
   },
   {
-    label: "TOPSHIRIQLAR",
+    group: "Topshiriqlar",
     items: [
-      { to: "/incoming",   icon: "↓",  label: "Menga berilgan", badge: "incoming" },
-      { to: "/outgoing",   icon: "↑",  label: "Men bergan"      },
+      { to: "/incoming",      icon: InboxIcon,    label: "Menga berilgan",    badge: "incoming"      },
+      { to: "/outgoing",      icon: OutboxIcon,   label: "Men bergan"         },
     ],
   },
   {
-    label: "SHAXSIY",
+    group: "Shaxsiy",
     items: [
-      { to: "/journal",    icon: "◇",  label: "Kundalik"        },
-      { to: "/notifications", icon: "◉", label: "Bildirishnomalar", badge: "notifications" },
+      { to: "/journal",       icon: JournalIcon,  label: "Kundalik"           },
+      { to: "/notifications", icon: BellIcon,     label: "Bildirishnomalar",  badge: "notifications" },
+      { to: "/activity",      icon: ActivityIcon, label: "Faoliyat logi"      },
+      { to: "/settings",      icon: SettingsIcon, label: "Sozlamalar"         },
     ],
   },
   {
-    label: "TIZIM",
+    group: "O'yinlar",
     items: [
-      { to: "/activity",   icon: "≋",  label: "Faoliyat logi"  },
-      { to: "/settings",   icon: "⊕",  label: "Sozlamalar"     },
-    ],
-  },
-  {
-    label: "GAME ZONE",
-    items: [
-      { to: "/checkers",   icon: "⬡",  label: "Shashka"        },
-      { to: "/chess",      icon: "♟",  label: "Shaxmat"        },
-      { to: "/2048",       icon: "#",  label: "2048"           },
+      { to: "/checkers",      icon: CheckersIcon, label: "Shashka"            },
+      { to: "/chess",         icon: ChessIcon,    label: "Shaxmat"            },
+      { to: "/2048",          icon: TwokIcon,     label: "2048"               },
     ],
   },
 ];
 
-// ─── Main Sidebar ───────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────
+   SVG ICONS  (16 × 16 viewBox, strokeWidth 1.6)
+───────────────────────────────────────────────────────────── */
+function Ico({ d, children, size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none"
+      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {d ? <path d={d} /> : children}
+    </svg>
+  );
+}
+function HomeIcon()     { return <Ico><rect x="2" y="7" width="12" height="8" rx="1.5"/><path d="M1 7.5 8 2l7 5.5"/></Ico>; }
+function TaskIcon()     { return <Ico><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5.5 6h5M5.5 9h3"/></Ico>; }
+function CalIcon()      { return <Ico><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 7h12M5.5 2v2M10.5 2v2"/></Ico>; }
+function TeamsIcon()    { return <Ico><circle cx="6" cy="5.5" r="2.5"/><path d="M1.5 13c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/><circle cx="12" cy="5.5" r="2"/><path d="M14.5 13c0-1.8-1.2-3-2.5-3"/></Ico>; }
+function CompanyIcon()  { return <Ico><rect x="2" y="5" width="12" height="9" rx="1"/><path d="M5 14V9h6v5M2 8V5.5A1.5 1.5 0 0 1 3.5 4h9A1.5 1.5 0 0 1 14 5.5V8"/></Ico>; }
+function InviteIcon()   { return <Ico><rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M2 7l6 4 6-4"/></Ico>; }
+function InboxIcon()    { return <Ico><path d="M2 10h3l1.5 2h3L11 10h3"/><rect x="2" y="4" width="12" height="10" rx="1.5"/><path d="M8 4v5M5.5 6.5 8 9l2.5-2.5"/></Ico>; }
+function OutboxIcon()   { return <Ico><path d="M2 10h3l1.5 2h3L11 10h3"/><rect x="2" y="4" width="12" height="10" rx="1.5"/><path d="M8 9V4M5.5 6.5 8 4l2.5 2.5"/></Ico>; }
+function JournalIcon()  { return <Ico><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/><rect x="3" y="2" width="2" height="12" rx="1" fill="currentColor" stroke="none" opacity=".2"/></Ico>; }
+function BellIcon()     { return <Ico><path d="M8 2a4 4 0 0 1 4 4v3l1.5 2.5h-11L4 9V6a4 4 0 0 1 4-4z"/><path d="M6.5 12.5a1.5 1.5 0 0 0 3 0"/></Ico>; }
+function ActivityIcon() { return <Ico><polyline points="2,10 5,6 8,9 11,4 14,7"/></Ico>; }
+function SettingsIcon() { return <Ico><circle cx="8" cy="8" r="2.5"/><path d="M8 2v1.5M8 12.5V14M14 8h-1.5M3.5 8H2M12.2 3.8l-1.1 1.1M4.9 11.1 3.8 12.2M12.2 12.2l-1.1-1.1M4.9 4.9 3.8 3.8"/></Ico>; }
+function CheckersIcon() { return <Ico><rect x="2" y="2" width="12" height="12" rx="1.5"/><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="10.5" cy="5.5" r="1.5"/><circle cx="5.5" cy="10.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5" fill="currentColor" stroke="none"/></Ico>; }
+function ChessIcon()    { return <Ico d="M6 13h4M8 13V9M5 9h6M6.5 9 6 6h4l-.5 3M7 6V4.5A1.5 1.5 0 0 1 8 3a1.5 1.5 0 0 1 1 1.5V6"/>; }
+function TwokIcon()     { return <Ico><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6.5C5 5.7 5.7 5 6.5 5S8 5.7 8 6.5C8 8 5 9 5 10.5h3M11 5v6"/></Ico>; }
+function SunIcon()      { return <Ico><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M14 8h-1.5M3.5 8H2M12.2 3.8l-1.1 1.1M4.9 11.1 3.8 12.2M12.2 12.2l-1.1-1.1M4.9 4.9 3.8 3.8"/></Ico>; }
+function MoonIcon()     { return <Ico d="M7 3C4.2 3 2 5.2 2 8s2.2 5 5 5c1.8 0 3.4-.9 4.3-2.3C10.9 11 10.5 11 10 11c-2.8 0-5-2.2-5-5 0-1.2.4-2.3 1.1-3.1C5.4 2.9 4.7 3 4 3"/>; }
+function ChevronIcon({ open }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d={open ? "M9 3L5 7l4 4" : "M5 3l4 4-4 4"} />
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SIDEBAR COMPONENT
+───────────────────────────────────────────────────────────── */
 export default function Sidebar() {
-  const { user, logout } = useContext(AuthContext);
-  const { tasks } = useContext(TaskContext);
-  const { notifications } = useContext(NotificationContext);
+  const { user, logout }       = useContext(AuthContext);
+  const { tasks = [] }         = useContext(TaskContext);
+  const { notifications = [] } = useContext(NotificationContext);
 
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("theme") === "dark" ||
-        (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches)
-      );
-    }
-    return false;
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("planner-theme");
+    if (saved) return saved === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
-  const [hovered, setHovered] = useState(null);
-  const [ripples, setRipples] = useState([]);
-  const sidebarRef = useRef(null);
 
-  // Dark mode sync
   useEffect(() => {
-    const root = document.documentElement;
-    if (dark) {
-      root.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      root.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("planner-theme", dark ? "dark" : "light");
   }, [dark]);
 
-  // System color scheme listener
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e) => {
-      if (!localStorage.getItem("theme")) setDark(e.matches);
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const fn = (e) => { if (!localStorage.getItem("planner-theme")) setDark(e.matches); };
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
   }, []);
 
-  const incomingCount = tasks.filter(
-    (t) => t.assignedTo === user?.uid && !t.completed
-  ).length;
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const getBadge = (key) => {
-    if (key === "incoming") return incomingCount;
-    if (key === "notifications") return unreadCount;
-    return 0;
-  };
-
-  const addRipple = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const id = Date.now();
-    setRipples((prev) => [...prev, { id, x, y }]);
-    setTimeout(() => setRipples((prev) => prev.filter((r) => r.id !== id)), 600);
-  };
+  const incomingCount = tasks.filter(t => t.assignedTo === user?.uid && !t.completed).length;
+  const unreadCount   = notifications.filter(n => !n.read).length;
+  const getBadge = (key) => key === "incoming" ? incomingCount : key === "notifications" ? unreadCount : 0;
 
   return (
     <>
-      {/* ── Global styles injected once ── */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+      <style>{STYLES}</style>
 
-        :root {
-          --sidebar-w: 256px;
-          --sidebar-w-collapsed: 68px;
-          --glass-light: rgba(255,255,255,0.72);
-          --glass-dark:  rgba(15,15,25,0.80);
-          --accent-1: #6366f1;
-          --accent-2: #8b5cf6;
-          --accent-3: #06b6d4;
-          --surface-light: rgba(248,248,255,0.9);
-          --surface-dark:  rgba(20,20,35,0.9);
-          --border-light: rgba(99,102,241,0.15);
-          --border-dark:  rgba(139,92,246,0.2);
-        }
+      <aside className={`sb${collapsed ? " sb--col" : ""}`}>
 
-        * { box-sizing: border-box; }
-
-        body {
-          font-family: 'DM Sans', sans-serif;
-          transition: background 0.4s, color 0.4s;
-        }
-
-        .dark body, :root.dark {
-          color-scheme: dark;
-        }
-
-        /* Sidebar shell */
-        .ps-sidebar {
-          position: fixed; left: 0; top: 0; z-index: 100;
-          height: 100vh;
-          display: flex; flex-direction: column;
-          width: var(--sidebar-w);
-          transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
-          overflow: hidden;
-          background: var(--glass-light);
-          backdrop-filter: blur(24px) saturate(180%);
-          -webkit-backdrop-filter: blur(24px) saturate(180%);
-          border-right: 1px solid var(--border-light);
-          box-shadow:
-            4px 0 24px rgba(99,102,241,0.08),
-            inset -1px 0 0 rgba(255,255,255,0.6);
-        }
-        .dark .ps-sidebar {
-          background: var(--glass-dark);
-          border-right-color: var(--border-dark);
-          box-shadow:
-            4px 0 32px rgba(0,0,0,0.4),
-            inset -1px 0 0 rgba(139,92,246,0.12);
-        }
-        .ps-sidebar.collapsed { width: var(--sidebar-w-collapsed); }
-
-        /* Ambient background orbs */
-        .ps-orb {
-          position: absolute; border-radius: 50%; pointer-events: none;
-          filter: blur(48px); opacity: 0.35; z-index: 0;
-          transition: opacity 0.4s;
-        }
-        .ps-orb-1 { width:180px; height:180px; background: radial-gradient(circle, #6366f1, transparent); top: -40px; left: -60px; }
-        .ps-orb-2 { width:140px; height:140px; background: radial-gradient(circle, #8b5cf6, transparent); bottom: 80px; right: -50px; }
-        .ps-orb-3 { width:100px; height:100px; background: radial-gradient(circle, #06b6d4, transparent); top: 45%; left: 10px; }
-        .dark .ps-orb { opacity: 0.18; }
-
-        /* Logo */
-        .ps-logo {
-          font-family: 'Syne', sans-serif;
-          font-weight: 800;
-          font-size: 1.35rem;
-          letter-spacing: -0.03em;
-          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          white-space: nowrap;
-          overflow: hidden;
-          transition: opacity 0.3s, max-width 0.4s;
-          max-width: 160px;
-        }
-        .collapsed .ps-logo { max-width: 0; opacity: 0; }
-
-        /* Section label */
-        .ps-section-label {
-          font-family: 'Syne', sans-serif;
-          font-size: 0.6rem;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          color: #a0a0b8;
-          padding: 0 10px;
-          margin-bottom: 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          transition: opacity 0.25s, max-height 0.4s;
-          max-height: 20px;
-        }
-        .collapsed .ps-section-label { opacity: 0; max-height: 0; }
-
-        /* Nav item */
-        .ps-item {
-          position: relative;
-          display: flex; align-items: center;
-          gap: 10px;
-          padding: 9px 10px;
-          border-radius: 10px;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
-          text-decoration: none;
-          overflow: hidden;
-          font-size: 0.83rem;
-          font-weight: 500;
-          color: #64748b;
-          white-space: nowrap;
-        }
-        .dark .ps-item { color: #94a3b8; }
-
-        .ps-item:hover {
-          background: rgba(99,102,241,0.08);
-          color: #6366f1;
-          transform: translateX(3px);
-        }
-        .dark .ps-item:hover {
-          background: rgba(139,92,246,0.12);
-          color: #a78bfa;
-        }
-
-        .ps-item.active {
-          background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08));
-          color: #6366f1;
-          font-weight: 600;
-          box-shadow: inset 0 0 0 1px rgba(99,102,241,0.2);
-        }
-        .dark .ps-item.active {
-          background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(99,102,241,0.12));
-          color: #a78bfa;
-          box-shadow: inset 0 0 0 1px rgba(139,92,246,0.3);
-        }
-
-        /* Active left bar */
-        .ps-item.active::before {
-          content: '';
-          position: absolute; left: 0; top: 50%;
-          transform: translateY(-50%);
-          width: 3px; height: 20px;
-          border-radius: 0 3px 3px 0;
-          background: linear-gradient(180deg, #6366f1, #8b5cf6);
-        }
-        .dark .ps-item.active::before { background: linear-gradient(180deg, #8b5cf6, #a78bfa); }
-
-        /* Item icon */
-        .ps-item-icon {
-          width: 28px; height: 28px;
-          display: flex; align-items: center; justify-content: center;
-          border-radius: 7px;
-          background: rgba(99,102,241,0.06);
-          font-size: 0.95rem;
-          flex-shrink: 0;
-          transition: background 0.2s, transform 0.2s;
-        }
-        .ps-item:hover .ps-item-icon,
-        .ps-item.active .ps-item-icon {
-          background: rgba(99,102,241,0.15);
-          transform: scale(1.08);
-        }
-        .dark .ps-item-icon { background: rgba(139,92,246,0.08); }
-        .dark .ps-item:hover .ps-item-icon,
-        .dark .ps-item.active .ps-item-icon { background: rgba(139,92,246,0.2); }
-
-        /* Item label */
-        .ps-item-label {
-          flex: 1;
-          transition: opacity 0.25s, max-width 0.4s;
-          max-width: 160px;
-          overflow: hidden;
-        }
-        .collapsed .ps-item-label { opacity: 0; max-width: 0; }
-
-        /* Badge */
-        .ps-badge {
-          font-size: 0.6rem;
-          font-weight: 700;
-          font-family: 'Syne', sans-serif;
-          background: linear-gradient(135deg, #ef4444, #f97316);
-          color: white;
-          padding: 1px 6px;
-          border-radius: 20px;
-          min-width: 18px;
-          text-align: center;
-          animation: psBadgePulse 2s ease-in-out infinite;
-          flex-shrink: 0;
-          transition: opacity 0.25s;
-          box-shadow: 0 2px 6px rgba(239,68,68,0.4);
-        }
-        .collapsed .ps-badge { opacity: 0; pointer-events: none; }
-        @keyframes psBadgePulse {
-          0%, 100% { box-shadow: 0 2px 6px rgba(239,68,68,0.4); }
-          50% { box-shadow: 0 2px 12px rgba(239,68,68,0.7); }
-        }
-
-        /* Tooltip (collapsed mode) */
-        .ps-tooltip {
-          position: absolute; left: calc(100% + 12px); top: 50%;
-          transform: translateY(-50%) scale(0.9);
-          background: rgba(15,15,25,0.95);
-          color: white;
-          font-size: 0.75rem; font-weight: 500;
-          padding: 5px 10px;
-          border-radius: 7px;
-          white-space: nowrap;
-          pointer-events: none;
-          opacity: 0;
-          transition: all 0.15s;
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(99,102,241,0.3);
-          z-index: 200;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-        }
-        .collapsed .ps-item:hover .ps-tooltip {
-          opacity: 1;
-          transform: translateY(-50%) scale(1);
-        }
-
-        /* Ripple */
-        .ps-ripple {
-          position: absolute;
-          border-radius: 50%;
-          background: rgba(99,102,241,0.25);
-          transform: scale(0);
-          animation: psRipple 0.6s linear;
-          pointer-events: none;
-        }
-        @keyframes psRipple {
-          to { transform: scale(4); opacity: 0; }
-        }
-
-        /* Divider */
-        .ps-divider {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(99,102,241,0.15), transparent);
-          margin: 6px 8px;
-        }
-        .dark .ps-divider { background: linear-gradient(90deg, transparent, rgba(139,92,246,0.2), transparent); }
-
-        /* Collapse button */
-        .ps-collapse-btn {
-          display: flex; align-items: center; justify-content: center;
-          width: 28px; height: 28px;
-          border-radius: 8px;
-          border: 1px solid rgba(99,102,241,0.2);
-          background: rgba(99,102,241,0.06);
-          color: #6366f1;
-          cursor: pointer;
-          transition: all 0.2s;
-          flex-shrink: 0;
-        }
-        .ps-collapse-btn:hover {
-          background: rgba(99,102,241,0.15);
-          border-color: rgba(99,102,241,0.4);
-          transform: scale(1.08);
-        }
-        .dark .ps-collapse-btn {
-          border-color: rgba(139,92,246,0.3);
-          background: rgba(139,92,246,0.08);
-          color: #a78bfa;
-        }
-
-        /* Dark toggle */
-        .ps-dark-btn {
-          display: flex; align-items: center; justify-content: center;
-          width: 28px; height: 28px;
-          border-radius: 8px;
-          background: transparent;
-          border: 1px solid rgba(99,102,241,0.15);
-          color: #64748b;
-          cursor: pointer;
-          transition: all 0.2s;
-          flex-shrink: 0;
-        }
-        .ps-dark-btn:hover {
-          background: rgba(99,102,241,0.08);
-          color: #6366f1;
-          border-color: rgba(99,102,241,0.3);
-        }
-        .dark .ps-dark-btn { color: #94a3b8; border-color: rgba(139,92,246,0.2); }
-        .dark .ps-dark-btn:hover { color: #fbbf24; background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); }
-
-        /* User panel */
-        .ps-user {
-          display: flex; align-items: center; gap: 10px;
-          padding: 10px;
-          border-radius: 12px;
-          background: rgba(99,102,241,0.04);
-          border: 1px solid rgba(99,102,241,0.1);
-          transition: all 0.2s;
-          cursor: default;
-        }
-        .ps-user:hover {
-          background: rgba(99,102,241,0.08);
-          border-color: rgba(99,102,241,0.2);
-        }
-        .dark .ps-user {
-          background: rgba(139,92,246,0.06);
-          border-color: rgba(139,92,246,0.15);
-        }
-
-        .ps-avatar {
-          width: 34px; height: 34px;
-          border-radius: 10px;
-          border: 2px solid transparent;
-          background-image: linear-gradient(white, white), linear-gradient(135deg, #6366f1, #8b5cf6);
-          background-origin: border-box;
-          background-clip: content-box, border-box;
-          object-fit: cover;
-          flex-shrink: 0;
-          transition: transform 0.2s;
-        }
-        .ps-user:hover .ps-avatar { transform: scale(1.05); }
-
-        .ps-user-info {
-          flex: 1; min-width: 0;
-          overflow: hidden;
-          transition: opacity 0.25s, max-width 0.4s;
-          max-width: 160px;
-        }
-        .collapsed .ps-user-info { opacity: 0; max-width: 0; }
-
-        .ps-user-name {
-          font-family: 'Syne', sans-serif;
-          font-size: 0.8rem; font-weight: 600;
-          color: #1e293b;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .dark .ps-user-name { color: #e2e8f0; }
-
-        .ps-user-email {
-          font-size: 0.68rem;
-          color: #94a3b8;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-
-        /* Status dot */
-        .ps-status {
-          width: 7px; height: 7px; border-radius: 50%;
-          background: #22c55e;
-          flex-shrink: 0;
-          box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
-          animation: psStatusPulse 3s ease-in-out infinite;
-        }
-        @keyframes psStatusPulse {
-          0%, 100% { box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
-          50% { box-shadow: 0 0 0 4px rgba(34,197,94,0.15); }
-        }
-
-        /* Logout */
-        .ps-logout-btn {
-          width: 100%;
-          padding: 7px;
-          border-radius: 9px;
-          font-size: 0.78rem; font-weight: 500;
-          color: #ef4444;
-          background: transparent;
-          border: 1px solid rgba(239,68,68,0.15);
-          cursor: pointer;
-          transition: all 0.2s;
-          white-space: nowrap;
-          overflow: hidden;
-          transition: opacity 0.25s, all 0.2s;
-        }
-        .ps-logout-btn:hover {
-          background: rgba(239,68,68,0.06);
-          border-color: rgba(239,68,68,0.35);
-        }
-        .collapsed .ps-logout-btn { opacity: 0; pointer-events: none; }
-
-        /* Scrollbar */
-        .ps-nav::-webkit-scrollbar { width: 3px; }
-        .ps-nav::-webkit-scrollbar-track { background: transparent; }
-        .ps-nav::-webkit-scrollbar-thumb {
-          background: rgba(99,102,241,0.2);
-          border-radius: 3px;
-        }
-
-        /* Fade-in sections */
-        @keyframes psFadeSlide {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .ps-section { animation: psFadeSlide 0.4s ease both; }
-
-        /* Game zone special */
-        .ps-game-icon { filter: saturate(1.4); }
-
-        /* Content offset */
-        .ps-content-offset {
-          margin-left: var(--sidebar-w);
-          transition: margin-left 0.4s cubic-bezier(0.4,0,0.2,1);
-        }
-        .collapsed ~ .ps-content-offset { margin-left: var(--sidebar-w-collapsed); }
-      `}</style>
-
-      <aside
-        ref={sidebarRef}
-        className={`ps-sidebar${collapsed ? " collapsed" : ""}`}
-      >
-        {/* Ambient orbs */}
-        <div className="ps-orb ps-orb-1" />
-        <div className="ps-orb ps-orb-2" />
-        <div className="ps-orb ps-orb-3" />
-
-        {/* ── Header ── */}
-        <div
-          style={{
-            position: "relative", zIndex: 1,
-            padding: "16px 12px 10px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            {/* Logo mark */}
-            <div style={{
-              width: 32, height: 32, borderRadius: 9,
-              background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-              boxShadow: "0 4px 12px rgba(99,102,241,0.4)",
-              fontSize: "0.85rem", color: "white",
-            }}>⚡</div>
-            <span className="ps-logo">Planner</span>
-          </div>
-
-          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-            <button className="ps-dark-btn" onClick={() => setDark((d) => !d)} title={dark ? "Light mode" : "Dark mode"}>
-              {dark ? <SunIcon /> : <MoonIcon />}
-            </button>
-            <button className="ps-collapse-btn" onClick={() => setCollapsed((c) => !c)} title={collapsed ? "Expand" : "Collapse"}>
-              <ChevronIcon collapsed={collapsed} />
-            </button>
-          </div>
+        {/* background texture lines */}
+        <div className="sb-lines" aria-hidden="true">
+          {[...Array(5)].map((_, i) => <span key={i} className="sb-line" style={{ "--i": i }} />)}
         </div>
 
-        <div className="ps-divider" />
+        {/* ── HEADER ── */}
+        <header className="sb-head">
+          <div className="sb-brand">
+            <div className="sb-mark">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z"
+                  stroke="white" strokeWidth="1.4" fill="rgba(255,255,255,.18)" strokeLinejoin="round"/>
+                <path d="M8 5L11 6.8V10.2L8 12L5 10.2V6.8L8 5Z" fill="white" opacity=".95"/>
+              </svg>
+            </div>
+            <span className="sb-wordmark">Planner</span>
+          </div>
 
-        {/* ── Navigation ── */}
-        <nav
-          className="ps-nav"
-          style={{
-            flex: 1, overflowY: "auto", overflowX: "hidden",
-            padding: "4px 8px", position: "relative", zIndex: 1,
-            display: "flex", flexDirection: "column", gap: 4,
-          }}
-        >
-          {NAV_SECTIONS.map((section, si) => (
-            <div
-              key={section.label}
-              className="ps-section"
-              style={{ animationDelay: `${si * 0.04}s` }}
-            >
-              <p className="ps-section-label">{section.label}</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {section.items.map((item) => {
-                  const badge = item.badge ? getBadge(item.badge) : 0;
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      className={({ isActive }) =>
-                        `ps-item${isActive ? " active" : ""}`
-                      }
-                      onClick={addRipple}
-                      onMouseEnter={() => setHovered(item.to)}
-                      onMouseLeave={() => setHovered(null)}
-                    >
-                      {/* Ripples */}
-                      {ripples.map((r) => (
-                        <span
-                          key={r.id}
-                          className="ps-ripple"
-                          style={{ left: r.x - 10, top: r.y - 10, width: 20, height: 20 }}
-                        />
-                      ))}
+          <div className="sb-controls">
+            <button className="sb-ctrl" onClick={() => setDark(d => !d)} title={dark ? "Light" : "Dark"}>
+              {dark ? <SunIcon /> : <MoonIcon />}
+            </button>
+            <button className="sb-ctrl" onClick={() => setCollapsed(c => !c)} title="Toggle">
+              <ChevronIcon open={!collapsed} />
+            </button>
+          </div>
+        </header>
 
-                      {/* Icon */}
-                      <span className={`ps-item-icon${section.label === "GAME ZONE" ? " ps-game-icon" : ""}`}>
-                        {item.icon}
-                      </span>
+        {/* ── NAV ── */}
+        <nav className="sb-nav">
+          {NAV.map((section, si) => (
+            <div key={section.group} className="sb-group" style={{ "--d": `${si * 55}ms` }}>
+              <p className="sb-glabel">{section.group}</p>
 
-                      {/* Label */}
-                      <span className="ps-item-label">{item.label}</span>
-
-                      {/* Badge */}
-                      {badge > 0 && (
-                        <span className="ps-badge">{badge > 9 ? "9+" : badge}</span>
-                      )}
-
-                      {/* Tooltip (only in collapsed mode) */}
-                      <span className="ps-tooltip">
-                        {item.label}
-                        {badge > 0 && ` (${badge})`}
-                      </span>
-                    </NavLink>
-                  );
-                })}
-              </div>
-
-              {si < NAV_SECTIONS.length - 1 && <div className="ps-divider" style={{ marginTop: 6 }} />}
+              {section.items.map((item) => {
+                const count = item.badge ? getBadge(item.badge) : 0;
+                const IC = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) => `sb-item${isActive ? " sb-item--on" : ""}`}
+                  >
+                    <span className="sb-ico"><IC /></span>
+                    <span className="sb-lbl">{item.label}</span>
+                    {count > 0 && <span className="sb-num">{count > 9 ? "9+" : count}</span>}
+                    <span className="sb-tip">{item.label}{count > 0 ? ` (${count})` : ""}</span>
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </nav>
 
-        {/* ── User Panel ── */}
-        <div
-          style={{
-            padding: "10px 10px 14px",
-            borderTop: "1px solid rgba(99,102,241,0.1)",
-            position: "relative", zIndex: 1,
-            flexShrink: 0,
-          }}
-        >
-          <div className="ps-user" style={{ marginBottom: 8 }}>
+        {/* ── USER ── */}
+        <footer className="sb-foot">
+          <div className="sb-user">
             <img
-              src={user?.photoURL || `https://api.dicebear.com/7.x/shapes/svg?seed=${user?.uid || "user"}`}
-              className="ps-avatar"
+              className="sb-ava"
+              src={user?.photoURL || `https://api.dicebear.com/8.x/thumbs/svg?seed=${user?.uid || "guest"}&backgroundColor=4f46e5`}
               alt="avatar"
             />
-            <div className="ps-user-info">
-              <p className="ps-user-name">{user?.displayName || "User"}</p>
-              <p className="ps-user-email">{user?.email || "user@planner.app"}</p>
+            <div className="sb-uinfo">
+              <p className="sb-uname">{user?.displayName || "Foydalanuvchi"}</p>
+              <p className="sb-uemail">{user?.email || ""}</p>
             </div>
-            <div className="ps-status" />
+            <span className="sb-dot" />
           </div>
 
-          <button className="ps-logout-btn" onClick={logout}>
-            ← Chiqish
+          <button className="sb-item sb-logout" onClick={logout}>
+            <span className="sb-ico">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M10 8H3M6 5l-3 3 3 3"/>
+                <path d="M7 3h5a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H7"/>
+              </svg>
+            </span>
+            <span className="sb-lbl">Chiqish</span>
+            <span className="sb-tip">Chiqish</span>
           </button>
+        </footer>
 
-          <p style={{
-            textAlign: "center",
-            fontSize: "0.6rem",
-            color: "rgba(148,163,184,0.5)",
-            marginTop: 8,
-            fontFamily: "'Syne', sans-serif",
-            letterSpacing: "0.08em",
-            transition: "opacity 0.25s",
-            opacity: collapsed ? 0 : 1,
-          }}>
-            © 2026 PLANNER
-          </p>
-        </div>
       </aside>
     </>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────
+   STYLES
+───────────────────────────────────────────────────────────── */
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ── tokens ── */
+:root {
+  --sb-w:  252px;
+  --sb-wc: 62px;
+
+  --sb-bg:       #ffffff;
+  --sb-border:   #e9e9f0;
+  --sb-surface:  #f5f5fc;
+
+  --sb-text:     #111118;
+  --sb-text2:    #6b7180;
+  --sb-text3:    #a0a8b8;
+
+  --sb-accent:   #4f46e5;
+  --sb-accent2:  #7c3aed;
+  --sb-ah:       rgba(79,70,229,.08);
+  --sb-abg:      rgba(79,70,229,.10);
+  --sb-aborder:  rgba(79,70,229,.20);
+
+  --sb-r:  10px;
+  --sb-dur: .22s;
+  --sb-ease: cubic-bezier(.4,0,.2,1);
+  --sb-shadow:
+    1px 0 0 var(--sb-border),
+    4px 0 20px rgba(0,0,0,.05),
+    12px 0 48px rgba(0,0,0,.03);
+}
+.dark {
+  --sb-bg:       #0c0c13;
+  --sb-border:   rgba(255,255,255,.07);
+  --sb-surface:  rgba(255,255,255,.05);
+
+  --sb-text:     #eeeef8;
+  --sb-text2:    #7a7a92;
+  --sb-text3:    #48485e;
+
+  --sb-accent:   #818cf8;
+  --sb-accent2:  #a78bfa;
+  --sb-ah:       rgba(129,140,248,.09);
+  --sb-abg:      rgba(129,140,248,.12);
+  --sb-aborder:  rgba(129,140,248,.26);
+
+  --sb-shadow:
+    1px 0 0 var(--sb-border),
+    4px 0 24px rgba(0,0,0,.45),
+    12px 0 60px rgba(0,0,0,.35);
+}
+
+/* ── reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── shell ── */
+.sb {
+  position: fixed; left: 0; top: 0; z-index: 100;
+  width: var(--sb-w); height: 100vh;
+  display: flex; flex-direction: column;
+  background: var(--sb-bg);
+  box-shadow: var(--sb-shadow);
+  transition: width var(--sb-dur) var(--sb-ease);
+  overflow: hidden;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.sb--col { width: var(--sb-wc); }
+
+/* ── background lines ── */
+.sb-lines {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 0; overflow: hidden;
+}
+.sb-line {
+  position: absolute;
+  left: calc(16px + var(--i) * 46px);
+  top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(79,70,229,.055) 30%,
+    rgba(79,70,229,.055) 70%,
+    transparent 100%
+  );
+  transform: skewX(-6deg);
+}
+.dark .sb-line {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(129,140,248,.04) 30%,
+    rgba(129,140,248,.04) 70%,
+    transparent 100%
+  );
+}
+
+/* ── header ── */
+.sb-head {
+  position: relative; z-index: 1;
+  padding: 16px 12px 13px;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  border-bottom: 1px solid var(--sb-border);
+  flex-shrink: 0;
+}
+
+.sb-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.sb-mark {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: linear-gradient(140deg, var(--sb-accent) 0%, var(--sb-accent2) 100%);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(79,70,229,.38), inset 0 1px 0 rgba(255,255,255,.18);
+  transition: transform .2s var(--sb-ease), box-shadow .2s;
+}
+.sb-mark:hover { transform: rotate(-6deg) scale(1.06); box-shadow: 0 4px 18px rgba(79,70,229,.48); }
+
+.sb-wordmark {
+  font-size: .96rem; font-weight: 700; letter-spacing: -.03em;
+  color: var(--sb-text);
+  white-space: nowrap; overflow: hidden;
+  max-width: 120px; opacity: 1;
+  transition: max-width var(--sb-dur) var(--sb-ease), opacity var(--sb-dur);
+}
+.sb--col .sb-wordmark { max-width: 0; opacity: 0; }
+
+.sb-controls {
+  display: flex; gap: 3px; flex-shrink: 0;
+}
+
+.sb-ctrl {
+  width: 28px; height: 28px; border-radius: 7px;
+  border: none; background: transparent;
+  color: var(--sb-text3);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background var(--sb-dur), color var(--sb-dur), transform .15s;
+}
+.sb-ctrl:hover {
+  background: var(--sb-ah);
+  color: var(--sb-accent);
+  transform: scale(1.1);
+}
+/* hide theme toggle in collapsed mode */
+.sb--col .sb-controls .sb-ctrl:first-child { display: none; }
+
+/* ── nav ── */
+.sb-nav {
+  position: relative; z-index: 1;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 8px 8px;
+  display: flex; flex-direction: column; gap: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79,70,229,.1) transparent;
+}
+.sb-nav::-webkit-scrollbar { width: 3px; }
+.sb-nav::-webkit-scrollbar-thumb { background: rgba(79,70,229,.1); border-radius: 2px; }
+
+/* ── group ── */
+.sb-group {
+  margin-bottom: 2px;
+  animation: sbIn .32s var(--sb-ease) var(--d, 0ms) both;
+}
+@keyframes sbIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sb-glabel {
+  font-size: .6rem; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--sb-text3);
+  padding: 10px 9px 5px;
+  white-space: nowrap; overflow: hidden;
+  max-height: 30px; opacity: 1;
+  transition: max-height var(--sb-dur) var(--sb-ease), opacity var(--sb-dur), padding var(--sb-dur);
+}
+.sb--col .sb-glabel { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+
+/* ── item ── */
+.sb-item {
+  position: relative;
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 8px;
+  border-radius: var(--sb-r);
+  border: 1px solid transparent;
+  color: var(--sb-text2);
+  font-size: .825rem; font-weight: 450;
+  text-decoration: none; cursor: pointer;
+  background: none;
+  width: 100%; text-align: left;
+  font-family: inherit;
+  overflow: hidden; white-space: nowrap;
+  transition:
+    background var(--sb-dur),
+    border-color var(--sb-dur),
+    color var(--sb-dur),
+    transform .18s var(--sb-ease);
+}
+.sb-item:hover {
+  background: var(--sb-ah);
+  color: var(--sb-accent);
+  transform: translateX(2px);
+}
+.sb-item--on {
+  background: var(--sb-abg);
+  border-color: var(--sb-aborder);
+  color: var(--sb-accent);
+  font-weight: 600;
+}
+.sb-item--on::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 2.5px; height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sb-accent);
+  box-shadow: 1px 0 8px var(--sb-accent);
+}
+
+/* ── icon wrapper ── */
+.sb-ico {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  background: var(--sb-surface);
+  transition: background var(--sb-dur), transform .18s;
+}
+.sb-item:hover .sb-ico,
+.sb-item--on .sb-ico {
+  background: rgba(79,70,229,.11);
+  transform: scale(1.07);
+}
+.dark .sb-item:hover .sb-ico,
+.dark .sb-item--on .sb-ico { background: rgba(129,140,248,.14); }
+
+/* ── label ── */
+.sb-lbl {
+  flex: 1; overflow: hidden;
+  max-width: 150px; opacity: 1;
+  transition: max-width var(--sb-dur) var(--sb-ease), opacity var(--sb-dur);
+}
+.sb--col .sb-lbl { max-width: 0; opacity: 0; }
+
+/* ── badge number ── */
+.sb-num {
+  font-family: 'Geist Mono', monospace;
+  font-size: .6rem; font-weight: 500; line-height: 1;
+  padding: 2px 6px; border-radius: 100px;
+  background: var(--sb-accent); color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2.5px var(--sb-bg);
+  transition: opacity var(--sb-dur);
+  animation: sbPop 2.6s ease-in-out infinite;
+}
+.sb--col .sb-num { opacity: 0; pointer-events: none; }
+@keyframes sbPop {
+  0%,100% { box-shadow: 0 0 0 2.5px var(--sb-bg); }
+  50%      { box-shadow: 0 0 0 2.5px var(--sb-bg), 0 0 10px rgba(79,70,229,.5); }
+}
+
+/* ── tooltip (collapsed only) ── */
+.sb-tip {
+  position: absolute; left: calc(100% + 8px); top: 50%;
+  transform: translateY(-50%) translateX(5px) scale(.94);
+  padding: 5px 10px; border-radius: 7px;
+  background: var(--sb-text); color: var(--sb-bg);
+  font-size: .75rem; font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  opacity: 0; pointer-events: none;
+  transition: opacity .14s, transform .14s;
+  z-index: 300;
+}
+.sb--col .sb-item:hover .sb-tip {
+  opacity: 1; transform: translateY(-50%) translateX(0) scale(1);
+}
+
+/* ── footer ── */
+.sb-foot {
+  position: relative; z-index: 1;
+  padding: 9px 8px 13px;
+  border-top: 1px solid var(--sb-border);
+  flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 5px;
+}
+
+.sb-user {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px;
+  border-radius: var(--sb-r);
+  border: 1px solid var(--sb-border);
+  background: var(--sb-surface);
+  overflow: hidden;
+  transition: background var(--sb-dur), border-color var(--sb-dur);
+  cursor: default;
+}
+.sb-user:hover {
+  background: var(--sb-ah);
+  border-color: var(--sb-aborder);
+}
+
+.sb-ava {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  object-fit: cover;
+  border: 1.5px solid var(--sb-border);
+  transition: transform .2s;
+}
+.sb-user:hover .sb-ava { transform: scale(1.07); }
+
+.sb-uinfo {
+  flex: 1; min-width: 0; overflow: hidden;
+  max-width: 150px; opacity: 1;
+  transition: max-width var(--sb-dur) var(--sb-ease), opacity var(--sb-dur);
+}
+.sb--col .sb-uinfo { max-width: 0; opacity: 0; }
+
+.sb-uname {
+  font-size: .78rem; font-weight: 600; color: var(--sb-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-uemail {
+  font-size: .65rem; color: var(--sb-text3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: 'Geist Mono', monospace;
+  margin-top: 1px;
+}
+
+.sb-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px var(--sb-bg), 0 0 6px rgba(34,197,94,.5);
+  animation: sbDot 2.8s ease-in-out infinite;
+  transition: opacity var(--sb-dur);
+}
+.sb--col .sb-dot { opacity: 0; }
+@keyframes sbDot {
+  0%,100% { box-shadow: 0 0 0 2px var(--sb-bg), 0 0 4px rgba(34,197,94,.4); }
+  50%      { box-shadow: 0 0 0 2px var(--sb-bg), 0 0 10px rgba(34,197,94,.7); }
+}
+
+/* logout — shares sb-item styles */
+.sb-logout {
+  color: var(--sb-text3);
+  border-color: transparent;
+}
+.sb-logout:hover {
+  background: rgba(239,68,68,.07);
+  border-color: rgba(239,68,68,.18);
+  color: #ef4444;
+  transform: translateX(0);
+}
+.sb-logout:hover .sb-ico { background: rgba(239,68,68,.1); }
+`;
