@@ -10,100 +10,152 @@ export const TaskContext = createContext();
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════
-const dedupe   = (arr) => arr.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
-const sortNew  = (arr) => [...arr].sort((a, b) => {
-  const da = a.created?.toDate?.() || new Date(a.created || 0);
-  const db_ = b.created?.toDate?.() || new Date(b.created || 0);
-  return db_ - da;
-});
+const dedupe = (arr) =>
+  arr.filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
 
-// ─── LOCAL UNDO STACK ──────────────────────────────────────────
-// Maximum 20 ta undo
+const sortNew = (arr) =>
+  [...arr].sort((a, b) => {
+    const ta = a.created?.toDate?.() ?? new Date(a.created ?? 0);
+    const tb = b.created?.toDate?.() ?? new Date(b.created ?? 0);
+    return tb - ta;
+  });
+
 const MAX_UNDO = 20;
 
 // ═══════════════════════════════════════════════════════════════
 // PROVIDER
 // ═══════════════════════════════════════════════════════════════
 export function TaskProvider({ children }) {
+  const [tasks,   setTasks]   = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [tasks,     setTasks]     = useState([]);
-  const [loading,   setLoading]   = useState(true);
-
-  // Undo stack: { type, payload }
+  // Undo stack
   const undoStack = useRef([]);
-
-  // Push to undo stack
   const pushUndo = (action) => {
     undoStack.current = [action, ...undoStack.current].slice(0, MAX_UNDO);
   };
 
-  // ── REALTIME LISTENER ──
-  useEffect(() => {
-    let unsubIncoming = null;
-    let unsubOutgoing = null;
-    let incomingData  = [];
-    let outgoingData  = [];
+  // ══════════════════════════════════════════════════════════════
+  // REALTIME LISTENER — muammo tuzatildi
+  //
+  // Muammo nima edi?
+  //   incomingData va outgoingData closure ichida "let" bilan
+  //   e'lon qilingan. Har safar onAuthStateChanged ishlaganda
+  //   yangi scope yaratiladi va eski o'zgaruvchilar yo'qoladi.
+  //   Lekin onSnapshot callbacklari eski scope'dagi o'zgaruvchilarga
+  //   murojaat qiladi — bu "stale closure" muammosi.
+  //   Natijada merge() ba'zan bo'sh array'ni ko'radi.
+  //
+  // Yechim:
+  //   useRef bilan closure'dan mustaqil xotira saqlaymiz.
+  //   Ref obyektiga yozilgan qiymat hamma snapshot'da bir xil.
+  // ══════════════════════════════════════════════════════════════
+  const storeRef = useRef({ incoming: [], outgoing: [], team: [] });
 
-    const merge = () => {
-      setTasks(sortNew(dedupe([...incomingData, ...outgoingData])));
+  useEffect(() => {
+    const subs = [];   // barcha unsubscribe funksiyalar
+
+    const rebuild = () => {
+      const { incoming, outgoing, team } = storeRef.current;
+      const merged = dedupe([...incoming, ...outgoing, ...team]);
+      setTasks(sortNew(merged));
       setLoading(false);
     };
 
     const unsubAuth = auth.onAuthStateChanged((user) => {
-      if (unsubIncoming) unsubIncoming();
-      if (unsubOutgoing) unsubOutgoing();
+      // Eski listenerlarni bekor qilish
+      subs.forEach(fn => fn());
+      subs.length = 0;
+      storeRef.current = { incoming: [], outgoing: [], team: [] };
 
-      if (!user) { setTasks([]); setLoading(false); return; }
+      if (!user) {
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
 
-      unsubIncoming = onSnapshot(
-        query(collection(db, "tasks"), where("assignedTo", "==", user.uid)),
-        (snap) => {
-          incomingData = snap.docs.map(d => ({ id: d.id, ...d.data(), direction: "incoming" }));
-          merge();
-        }
+      // ── 1. Menga topshirilgan vazifalar ──
+      subs.push(
+        onSnapshot(
+          query(collection(db, "tasks"), where("assignedTo", "==", user.uid)),
+          (snap) => {
+            storeRef.current.incoming = snap.docs.map(d => ({
+              id: d.id, ...d.data(), direction: "incoming",
+            }));
+            rebuild();
+          },
+          (err) => console.error("incoming listener:", err)
+        )
       );
 
-      unsubOutgoing = onSnapshot(
-        query(collection(db, "tasks"), where("userId", "==", user.uid)),
-        (snap) => {
-          outgoingData = snap.docs.map(d => ({ id: d.id, ...d.data(), direction: "outgoing" }));
-          merge();
-        }
+      // ── 2. Men yaratgan vazifalar ──
+      subs.push(
+        onSnapshot(
+          query(collection(db, "tasks"), where("userId", "==", user.uid)),
+          (snap) => {
+            storeRef.current.outgoing = snap.docs.map(d => ({
+              id: d.id, ...d.data(), direction: "outgoing",
+            }));
+            rebuild();
+          },
+          (err) => console.error("outgoing listener:", err)
+        )
+      );
+
+      // ── 3. Jamoa vazifalarim ──
+      // teamMemberIds array'da user.uid bo'lgan vazifalar
+      subs.push(
+        onSnapshot(
+          query(collection(db, "tasks"), where("teamMemberIds", "array-contains", user.uid)),
+          (snap) => {
+            storeRef.current.team = snap.docs.map(d => ({
+              id: d.id, ...d.data(), direction: "team",
+            }));
+            rebuild();
+          },
+          (err) => console.error("team listener:", err)
+        )
       );
     });
 
     return () => {
       unsubAuth();
-      if (unsubIncoming) unsubIncoming();
-      if (unsubOutgoing) unsubOutgoing();
+      subs.forEach(fn => fn());
     };
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
   // ➕ ADD TASK
-  // NEW: tags[], note, repeat, reminderAt qo'llab-quvvatlaydi
-  // ═══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
   const addTask = useCallback(async ({
     title,
-    date         = "",
-    priority     = "medium",
-    category     = "",
-    assignedTo   = null,
-    assignedEmail= null,
-    note         = "",
-    tags         = [],
-    repeat       = "none",   // "none"|"daily"|"weekly"|"monthly"
-    reminderAt   = null,     // ISO string yoki null
-    color        = "",       // custom rang
+    date          = "",
+    priority      = "medium",
+    category      = "",
+    assignedTo    = null,
+    assignedEmail = null,
+    teamId        = null,    // NEW: jamoa ID
+    teamName      = null,    // NEW: jamoa nomi
+    teamMemberIds = [],      // NEW: jamoa a'zolari UID'lari
+    note          = "",
+    tags          = [],
+    repeat        = "none",
+    reminderAt    = null,
+    color         = "",
   } = {}) => {
     if (!title?.trim()) return null;
     const user = auth.currentUser;
     if (!user) return null;
 
-    const toUid   = assignedTo    || user.uid;
-    const toEmail = assignedEmail || user.email;
+    const toUid   = assignedTo    ?? user.uid;
+    const toEmail = assignedEmail ?? user.email;
+
+    // Jamoa vazifasida barcha a'zolar + creator qo'shiladi
+    const allMemberIds = teamId
+      ? [...new Set([...teamMemberIds, user.uid])]
+      : [user.uid, toUid].filter(Boolean);
 
     const docRef = await addDoc(collection(db, "tasks"), {
       title:          title.trim(),
@@ -126,12 +178,31 @@ export function TaskProvider({ children }) {
       createdByEmail: user.email,
       assignedTo:     toUid,
       assignedEmail:  toEmail,
+      teamId:         teamId   ?? null,
+      teamName:       teamName ?? null,
+      teamMemberIds:  [...new Set(allMemberIds)],
       created:        serverTimestamp(),
       updatedAt:      serverTimestamp(),
     });
 
-    // Notification — faqat boshqaga topshirilsa
-    if (toUid !== user.uid) {
+    // Notification — boshqaga yoki jamoaga topshirilganda
+    if (teamId) {
+      // Jamoa a'zolariga bildirishnoma
+      const notifList = teamMemberIds.filter(uid => uid !== user.uid);
+      await Promise.all(notifList.map(uid =>
+        addDoc(collection(db, "notifications"), {
+          userId:    uid,
+          fromEmail: user.email,
+          taskId:    docRef.id,
+          teamId,
+          teamName,
+          text:      `${user.email} "${teamName}" jamoasiga vazifa berdi: "${title.trim()}"`,
+          type:      "team_task",
+          read:      false,
+          created:   serverTimestamp(),
+        })
+      ));
+    } else if (toUid !== user.uid) {
       await addDoc(collection(db, "notifications"), {
         userId:    toUid,
         fromEmail: user.email,
@@ -143,30 +214,23 @@ export function TaskProvider({ children }) {
       });
     }
 
-    // Undo support
     pushUndo({ type: "ADD", taskId: docRef.id });
-
     return docRef.id;
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════
-  // ➕ ADD MULTIPLE (bulk add — Tasks.jsx dan ishlatiladigan)
-  // ═══════════════════════════════════════════════════════════════
+  // ── addTasks (bulk) ──
   const addTasks = useCallback(async (list) => {
-    const ids = await Promise.all(list.map(item => addTask(item)));
-    return ids;
+    return Promise.all(list.map(item => addTask(item)));
   }, [addTask]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 🔁 TOGGLE COMPLETE
-  // ═══════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════
+  // CRUD
+  // ══════════════════════════════════════════════════════════════
   const toggleTask = useCallback(async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-
     const nowDone = !task.completed;
     pushUndo({ type: "TOGGLE", taskId: id, was: task.completed });
-
     await updateDoc(doc(db, "tasks", id), {
       completed:   nowDone,
       completedAt: nowDone ? serverTimestamp() : null,
@@ -174,27 +238,18 @@ export function TaskProvider({ children }) {
     });
   }, [tasks]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // ❌ DELETE
-  // ═══════════════════════════════════════════════════════════════
   const deleteTask = useCallback(async (id) => {
     const task = tasks.find(t => t.id === id);
     pushUndo({ type: "DELETE", snapshot: task });
     await deleteDoc(doc(db, "tasks", id));
   }, [tasks]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 🗑 BULK DELETE
-  // ═══════════════════════════════════════════════════════════════
   const deleteTasks = useCallback(async (ids) => {
     const batch = writeBatch(db);
     ids.forEach(id => batch.delete(doc(db, "tasks", id)));
     await batch.commit();
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════
-  // ✅ BULK COMPLETE
-  // ═══════════════════════════════════════════════════════════════
   const completeTasks = useCallback(async (ids) => {
     const batch = writeBatch(db);
     ids.forEach(id => batch.update(doc(db, "tasks", id), {
@@ -205,9 +260,6 @@ export function TaskProvider({ children }) {
     await batch.commit();
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════
-  // ✏️ EDIT TITLE
-  // ═══════════════════════════════════════════════════════════════
   const editTask = useCallback(async (id, newTitle) => {
     if (!newTitle?.trim()) return;
     const task = tasks.find(t => t.id === id);
@@ -218,9 +270,6 @@ export function TaskProvider({ children }) {
     });
   }, [tasks]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 🔄 UPDATE ANY FIELD(S)
-  // ═══════════════════════════════════════════════════════════════
   const updateTask = useCallback(async (id, fields = {}) => {
     await updateDoc(doc(db, "tasks", id), {
       ...fields,
@@ -228,9 +277,6 @@ export function TaskProvider({ children }) {
     });
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 📌 PIN / UNPIN
-  // ═══════════════════════════════════════════════════════════════
   const pinTask = useCallback(async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -240,9 +286,6 @@ export function TaskProvider({ children }) {
     });
   }, [tasks]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 🗄 ARCHIVE / UNARCHIVE
-  // ═══════════════════════════════════════════════════════════════
   const archiveTask = useCallback(async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -252,9 +295,6 @@ export function TaskProvider({ children }) {
     });
   }, [tasks]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 🔁 DUPLICATE
-  // ═══════════════════════════════════════════════════════════════
   const duplicateTask = useCallback(async (id) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
@@ -262,42 +302,34 @@ export function TaskProvider({ children }) {
     return addTask({ ...rest, title: rest.title + " (nusxa)" });
   }, [tasks, addTask]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // ↩️ UNDO
-  // ═══════════════════════════════════════════════════════════════
+  // ── UNDO ──
   const undo = useCallback(async () => {
     const action = undoStack.current.shift();
     if (!action) return;
-
-    if (action.type === "ADD") {
+    if (action.type === "ADD")
       await deleteDoc(doc(db, "tasks", action.taskId));
-    }
     if (action.type === "DELETE" && action.snapshot) {
-      const { id, ...rest } = action.snapshot;
+      const { id, direction, ...rest } = action.snapshot;
       await addDoc(collection(db, "tasks"), rest);
     }
     if (action.type === "TOGGLE") {
       const task = tasks.find(t => t.id === action.taskId);
       if (task) await updateDoc(doc(db, "tasks", action.taskId), {
-        completed:   action.was,
-        completedAt: action.was ? serverTimestamp() : null,
+        completed: action.was, completedAt: action.was ? serverTimestamp() : null,
       });
     }
-    if (action.type === "EDIT") {
+    if (action.type === "EDIT")
       await updateDoc(doc(db, "tasks", action.taskId), { title: action.was });
-    }
   }, [tasks]);
 
   const canUndo = undoStack.current.length > 0;
 
-  // ═══════════════════════════════════════════════════════════════
-  // SUBTASKS
-  // ═══════════════════════════════════════════════════════════════
+  // ── SUBTASKS ──
   const addSubtask = useCallback(async (taskId, text) => {
     if (!text?.trim()) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    const updated = [...(task.subtasks || []), {
+    const updated = [...(task.subtasks ?? []), {
       id: Date.now(), text: text.trim(), completed: false, createdAt: Date.now(),
     }];
     await updateDoc(doc(db, "tasks", taskId), { subtasks: updated, updatedAt: serverTimestamp() });
@@ -306,7 +338,7 @@ export function TaskProvider({ children }) {
   const toggleSubtask = useCallback(async (taskId, subId) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    const updated = (task.subtasks || []).map(s =>
+    const updated = (task.subtasks ?? []).map(s =>
       s.id === subId ? { ...s, completed: !s.completed } : s
     );
     await updateDoc(doc(db, "tasks", taskId), { subtasks: updated, updatedAt: serverTimestamp() });
@@ -316,7 +348,7 @@ export function TaskProvider({ children }) {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     await updateDoc(doc(db, "tasks", taskId), {
-      subtasks:  (task.subtasks || []).filter(s => s.id !== subId),
+      subtasks:  (task.subtasks ?? []).filter(s => s.id !== subId),
       updatedAt: serverTimestamp(),
     });
   }, [tasks]);
@@ -325,7 +357,7 @@ export function TaskProvider({ children }) {
     if (!newText?.trim()) return;
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    const updated = (task.subtasks || []).map(s =>
+    const updated = (task.subtasks ?? []).map(s =>
       s.id === subId ? { ...s, text: newText.trim() } : s
     );
     await updateDoc(doc(db, "tasks", taskId), { subtasks: updated, updatedAt: serverTimestamp() });
@@ -335,13 +367,11 @@ export function TaskProvider({ children }) {
     await updateDoc(doc(db, "tasks", taskId), { subtasks: newOrder, updatedAt: serverTimestamp() });
   }, []);
 
-  // ═══════════════════════════════════════════════════════════════
-  // 🏷 TAGS
-  // ═══════════════════════════════════════════════════════════════
+  // ── TAGS ──
   const addTag = useCallback(async (taskId, tag) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task || !tag?.trim()) return;
-    const tags = [...new Set([...(task.tags || []), tag.trim()])];
+    const tags = [...new Set([...(task.tags ?? []), tag.trim()])];
     await updateDoc(doc(db, "tasks", taskId), { tags, updatedAt: serverTimestamp() });
   }, [tasks]);
 
@@ -349,34 +379,32 @@ export function TaskProvider({ children }) {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     await updateDoc(doc(db, "tasks", taskId), {
-      tags: (task.tags || []).filter(t => t !== tag),
+      tags: (task.tags ?? []).filter(t => t !== tag),
       updatedAt: serverTimestamp(),
     });
   }, [tasks]);
 
-  // Barcha ishlatilgan teglar ro'yxati
-  const allTags = [...new Set(tasks.flatMap(t => t.tags || []))].sort();
+  const allTags = [...new Set(tasks.flatMap(t => t.tags ?? []))].sort();
 
-  // ═══════════════════════════════════════════════════════════════
-  // 📊 COMPUTED STATS
-  // ═══════════════════════════════════════════════════════════════
-  const todayStr  = new Date().toISOString().split("T")[0];
+  // ── STATS ──
+  const todayStr = new Date().toISOString().split("T")[0];
   const stats = {
-    total:       tasks.filter(t => !t.archived).length,
-    done:        tasks.filter(t => t.completed && !t.archived).length,
-    active:      tasks.filter(t => !t.completed && !t.archived).length,
-    pinned:      tasks.filter(t => t.pinned).length,
-    overdue:     tasks.filter(t => !t.completed && t.date && t.date < todayStr).length,
-    today:       tasks.filter(t => t.date === todayStr && !t.completed).length,
-    highPriority:tasks.filter(t => t.priority === "high" && !t.completed).length,
-    incoming:    tasks.filter(t => t.direction === "incoming").length,
-    outgoing:    tasks.filter(t => t.direction === "outgoing").length,
-    percent:     tasks.length ? Math.round(
-      tasks.filter(t=>t.completed).length / tasks.length * 100
-    ) : 0,
+    total:        tasks.filter(t => !t.archived).length,
+    done:         tasks.filter(t => t.completed && !t.archived).length,
+    active:       tasks.filter(t => !t.completed && !t.archived).length,
+    pinned:       tasks.filter(t => t.pinned).length,
+    overdue:      tasks.filter(t => !t.completed && t.date && t.date < todayStr).length,
+    today:        tasks.filter(t => t.date === todayStr && !t.completed).length,
+    highPriority: tasks.filter(t => t.priority === "high" && !t.completed).length,
+    incoming:     tasks.filter(t => t.direction === "incoming").length,
+    outgoing:     tasks.filter(t => t.direction === "outgoing").length,
+    team:         tasks.filter(t => t.direction === "team").length,
+    percent:      tasks.length
+      ? Math.round(tasks.filter(t => t.completed).length / tasks.length * 100)
+      : 0,
     byCategory: tasks.reduce((acc, t) => {
       const c = t.category || "Boshqa";
-      acc[c] = (acc[c] || 0) + 1;
+      acc[c] = (acc[c] ?? 0) + 1;
       return acc;
     }, {}),
     byPriority: {
@@ -386,44 +414,15 @@ export function TaskProvider({ children }) {
     },
   };
 
-  // ═══════════════════════════════════════════════════════════════
-  // PROVIDE
-  // ═══════════════════════════════════════════════════════════════
   return (
     <TaskContext.Provider value={{
-      // Data
-      tasks,
-      loading,
-      stats,
-      allTags,
-      canUndo,
-
-      // Core CRUD
-      addTask,
-      addTasks,
-      toggleTask,
-      deleteTask,
-      deleteTasks,
-      completeTasks,
-      editTask,
-      updateTask,
-
-      // Task actions
-      pinTask,
-      archiveTask,
-      duplicateTask,
-      undo,
-
-      // Subtasks
-      addSubtask,
-      toggleSubtask,
-      deleteSubtask,
-      editSubtask,
-      reorderSubtasks,
-
-      // Tags
-      addTag,
-      removeTag,
+      tasks, loading, stats, allTags, canUndo,
+      addTask, addTasks,
+      toggleTask, deleteTask, deleteTasks, completeTasks,
+      editTask, updateTask,
+      pinTask, archiveTask, duplicateTask, undo,
+      addSubtask, toggleSubtask, deleteSubtask, editSubtask, reorderSubtasks,
+      addTag, removeTag,
     }}>
       {children}
     </TaskContext.Provider>
