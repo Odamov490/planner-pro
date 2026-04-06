@@ -380,8 +380,20 @@ const OutgoingCard = ({
             }}>👥 {task.teamName}</span>
           )}
 
-          {/* Qabul qiluvchi ko'rsatish */}
-          {task.assignedEmail && (
+          {/* Ko'rsatish: jamoa yoki shaxs */}
+          {task.teamId ? (
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <span style={{
+                fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:999,
+                background:"#ede9fe", color:"#7c3aed", border:"1px solid #ddd6fe",
+              }}>👥 {task.teamName}</span>
+              {(task.teamMemberIds||[]).length > 0 && (
+                <span style={{ fontSize:10, color:"#9ca3af" }}>
+                  {(task.teamMemberIds||[]).length} a'zo
+                </span>
+              )}
+            </div>
+          ) : task.assignedEmail ? (
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <Avatar email={task.assignedEmail} size={18}/>
               <span style={{ fontSize: 11, color: "#9ca3af" }}>
@@ -390,7 +402,7 @@ const OutgoingCard = ({
                 </b>{" "}ga yuborildi
               </span>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Right — delete button */}
@@ -439,14 +451,23 @@ const RecipientGroup = ({ email, tasks, responses }) => {
   const total    = tasks.length;
   const pct      = total ? Math.round((done / total) * 100) : 0;
   const accepted = tasks.filter(t => responses[t.id] === "accepted").length;
+  const isTeam   = email?.startsWith("👥");
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-      <Avatar email={email} size={28}/>
+      {isTeam ? (
+        <div style={{
+          width:28, height:28, borderRadius:"50%", flexShrink:0,
+          background:"#ede9fe", border:"2px solid #ddd6fe",
+          display:"flex", alignItems:"center", justifyContent:"center", fontSize:14,
+        }}>👥</div>
+      ) : (
+        <Avatar email={email} size={28}/>
+      )}
       <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
-        {email?.split("@")[0]}
+        {isTeam ? email : email?.split("@")[0]}
       </span>
-      <span style={{ fontSize: 11, color: "#9ca3af" }}>{email}</span>
+      {!isTeam && <span style={{ fontSize: 11, color: "#9ca3af" }}>{email}</span>}
       <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.07)" }}/>
       <span style={{ fontSize: 10, color: "#9ca3af" }}>
         {accepted}/{total} qabul qildi
@@ -481,15 +502,23 @@ export default function Outgoing() {
   const { tasks, deleteTask } = useContext(TaskContext);
   const { user }              = useContext(AuthContext);
 
-  // Men yuborgan, o'zimga emas
-  const outgoing = useMemo(() =>
-    tasks.filter(t =>
-      t.userId     === user?.uid &&
-      t.assignedTo !== user?.uid &&
-      !t.archived
-    ),
-    [tasks, user]
-  );
+  // Men yuborgan + men yaratgan jamoa vazifalari
+  const outgoing = useMemo(() => {
+    const seen = new Set();
+    const result = [];
+    tasks.forEach(t => {
+      if (t.archived) return;
+      // Shaxsiy: men yuborgan, o'zimga emas
+      const isPersonal = t.userId === user?.uid && t.assignedTo !== user?.uid && !t.teamId;
+      // Jamoa: men yaratgan jamoa vazifasi
+      const isTeam = t.userId === user?.uid && !!t.teamId;
+      if ((isPersonal || isTeam) && !seen.has(t.id)) {
+        seen.add(t.id);
+        result.push({ ...t, _kind: isTeam ? "team" : "personal" });
+      }
+    });
+    return result;
+  }, [tasks, user]);
 
   // Firebase hooks
   const responses                   = useRecipientResponses(user?.uid);
@@ -497,6 +526,7 @@ export default function Outgoing() {
 
   // UI state
   const [filterStatus,   setFilterStatus]   = useState("all");
+  const [filterKind,     setFilterKind]     = useState("all"); // all|personal|team
   const [filterRecip,    setFilterRecip]    = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [sortBy,         setSortBy]         = useState("newest");
@@ -516,19 +546,27 @@ export default function Outgoing() {
 
     const byRecipient = {};
     outgoing.forEach(t => {
-      const key = t.assignedEmail || t.assignedTo || "Noma'lum";
+      const key = t.teamId
+        ? `👥 ${t.teamName || "Jamoa"}`
+        : (t.assignedEmail || t.assignedTo || "Noma'lum");
       if (!byRecipient[key]) byRecipient[key] = [];
       byRecipient[key].push(t);
     });
 
-    return { total, done, overdue, accepted, rejected, pct, byRecipient };
+    const teamCount = outgoing.filter(t => !!t.teamId).length;
+    return { total, done, overdue, accepted, rejected, pct, byRecipient, teamCount };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outgoing, responses]);
 
-  // Unique recipients
-  const recipients = useMemo(() => [
-    ...new Set(outgoing.map(t => t.assignedEmail).filter(Boolean))
-  ], [outgoing]);
+  // Unique recipients (shaxsiy + jamoa)
+  const recipients = useMemo(() => {
+    const s = new Set();
+    outgoing.forEach(t => {
+      if (t.teamId) s.add(`👥 ${t.teamName || "Jamoa"}`);
+      else if (t.assignedEmail) s.add(t.assignedEmail);
+    });
+    return [...s];
+  }, [outgoing]);
 
   // ── FILTER + SORT ──
   const filtered = useMemo(() => {
@@ -550,8 +588,15 @@ export default function Outgoing() {
       if (filterStatus === "accepted") list = list.filter(t => getResp(t.id) === "accepted");
       if (filterStatus === "rejected") list = list.filter(t => getResp(t.id) === "rejected");
     }
+    if (filterKind !== "all") {
+      if (filterKind === "team")     list = list.filter(t => !!t.teamId);
+      if (filterKind === "personal") list = list.filter(t => !t.teamId);
+    }
     if (filterRecip !== "all") {
-      list = list.filter(t => t.assignedEmail === filterRecip);
+      list = list.filter(t => {
+        if (t.teamId) return `👥 ${t.teamName || "Jamoa"}` === filterRecip;
+        return t.assignedEmail === filterRecip;
+      });
     }
     if (filterPriority !== "all") {
       list = list.filter(t => t.priority === filterPriority);
@@ -583,7 +628,9 @@ export default function Outgoing() {
   const byRecipient = useMemo(() => {
     const m = {};
     filtered.forEach(t => {
-      const k = t.assignedEmail || "Noma'lum";
+      const k = t.teamId
+        ? `👥 ${t.teamName || "Jamoa"}`
+        : (t.assignedEmail || "Noma'lum");
       if (!m[k]) m[k] = [];
       m[k].push(t);
     });
@@ -670,6 +717,7 @@ export default function Outgoing() {
               <StatCard label="Rad etildi"       value={stats.rejected} icon="👎" color="#dc2626"/>
               <StatCard label="Kechikkan"        value={stats.overdue}  icon="⚠️" color="#f59e0b"
                 sub={stats.overdue > 0 ? "Diqqat!" : undefined}/>
+              <StatCard label="Jamoa vazifalari" value={stats.teamCount} icon="👥" color="#8b5cf6"/>
             </div>
 
             {/* ── VIEW TABS — Incoming bilan aynan bir xil ── */}
@@ -689,6 +737,30 @@ export default function Outgoing() {
                   color:      viewMode === m.v ? "#fff"    : "#9ca3af",
                   transition: "all 0.15s", whiteSpace: "nowrap",
                 }}>{m.l}</button>
+              ))}
+            </div>
+
+            {/* ── KIND TABS ── */}
+            <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+              {[
+                { v:"all",      l:"Barchasi",         count: outgoing.length },
+                { v:"personal", l:"👤 Shaxsiy",       count: outgoing.filter(t=>!t.teamId).length },
+                { v:"team",     l:"👥 Jamoa",         count: outgoing.filter(t=>!!t.teamId).length },
+              ].map(k => (
+                <button key={k.v} onClick={() => setFilterKind(k.v)} style={{
+                  padding:"7px 16px", borderRadius:999, border:"none", cursor:"pointer",
+                  fontFamily:"inherit", fontSize:13, fontWeight:600,
+                  background: filterKind===k.v ? "#1a1a1a" : "#f3f4f6",
+                  color:      filterKind===k.v ? "#fff"    : "#6b7280",
+                  display:"flex", alignItems:"center", gap:6, transition:"all 0.15s",
+                }}>
+                  {k.l}
+                  <span style={{
+                    fontSize:10, fontWeight:800, padding:"1px 7px", borderRadius:999,
+                    background: filterKind===k.v ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)",
+                    color: filterKind===k.v ? "#fff" : "#9ca3af",
+                  }}>{k.count}</span>
+                </button>
               ))}
             </div>
 
