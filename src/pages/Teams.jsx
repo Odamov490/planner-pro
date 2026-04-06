@@ -1,6 +1,7 @@
 import { useContext, useState, useRef, useEffect, useCallback } from "react";
 import { TeamContext } from "../context/TeamContext";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { collection, onSnapshot } from "firebase/firestore";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -170,6 +171,147 @@ const Btn = ({ onClick, disabled, children, variant="primary", style:s={} }) => 
 };
 
 // ═══════════════════════════════════════════════════════════════
+// HOOK — barcha foydalanuvchilarni real-time yuklash
+// ═══════════════════════════════════════════════════════════════
+function useAllUsers() {
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "users"), snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, []);
+  return users;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// USER SEARCH INPUT — yozganda bazadan dropdown chiqadi
+// ═══════════════════════════════════════════════════════════════
+const UserSearchInput = ({ value, onChange, onSelect, excludeEmails=[], color="#6366f1" }) => {
+  const allUsers    = useAllUsers();
+  const [open, setOpen] = useState(false);
+  const wrapRef     = useRef(null);
+
+  useEffect(() => {
+    const h = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const suggestions = value.trim().length === 0 ? [] : allUsers.filter(u => {
+    if (!u.email) return false;
+    if (excludeEmails.includes(u.email)) return false;
+    const q = value.toLowerCase();
+    return (
+      u.email.toLowerCase().includes(q) ||
+      (u.displayName || "").toLowerCase().includes(q)
+    );
+  }).slice(0, 8);
+
+  const handlePick = user => {
+    onSelect(user);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position:"relative", flex:1 }}>
+      <Input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => value.trim() && setOpen(true)}
+        placeholder="Email yoki ism yozing…"
+      />
+
+      {/* Suggestions dropdown */}
+      {open && suggestions.length > 0 && (
+        <div style={{
+          position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:400,
+          background:"#fff", border:"1px solid rgba(0,0,0,0.1)",
+          borderRadius:14, boxShadow:"0 12px 40px rgba(0,0,0,0.13)",
+          overflow:"hidden",
+          animation:"popIn 0.15s cubic-bezier(0.34,1.56,0.64,1)",
+        }}>
+          {/* Header */}
+          <div style={{
+            padding:"8px 14px 6px",
+            fontSize:10, fontWeight:700, color:"#9ca3af",
+            textTransform:"uppercase", letterSpacing:"0.07em",
+            borderBottom:"1px solid rgba(0,0,0,0.05)",
+          }}>
+            Foydalanuvchilar — {suggestions.length} ta
+          </div>
+
+          {suggestions.map((u, i) => (
+            <div
+              key={u.id}
+              onMouseDown={() => handlePick(u)}
+              style={{
+                display:"flex", alignItems:"center", gap:10,
+                padding:"9px 14px", cursor:"pointer",
+                borderBottom: i < suggestions.length-1 ? "1px solid rgba(0,0,0,0.04)" : "none",
+                background:"#fff", transition:"background 0.1s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = color+"0e"}
+              onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+            >
+              {/* Avatar */}
+              <div style={{
+                width:36, height:36, borderRadius:"50%", flexShrink:0,
+                background: u.photoURL ? "transparent" : color+"20",
+                border:`2px solid ${color}30`, overflow:"hidden",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:12, fontWeight:800, color,
+              }}>
+                {u.photoURL
+                  ? <img src={u.photoURL} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  : (u.displayName || u.email || "?").slice(0,2).toUpperCase()
+                }
+              </div>
+
+              {/* Text */}
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{
+                  fontSize:13, fontWeight:700, color:"#1a1a1a",
+                  overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                }}>
+                  {u.displayName || u.email?.split("@")[0]}
+                </div>
+                <div style={{ fontSize:11, color:"#9ca3af" }}>{u.email}</div>
+              </div>
+
+              {/* Tanlash chip */}
+              <div style={{
+                fontSize:10, fontWeight:700, color,
+                background:color+"18", borderRadius:8, padding:"3px 9px", flexShrink:0,
+                border:`1px solid ${color}30`,
+              }}>Tanlash</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Topilmadi */}
+      {open && value.trim().length >= 2 && suggestions.length === 0 && (
+        <div style={{
+          position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:400,
+          background:"#fff", border:"1px solid rgba(0,0,0,0.1)",
+          borderRadius:12, padding:"16px", boxShadow:"0 8px 32px rgba(0,0,0,0.1)",
+          textAlign:"center",
+        }}>
+          <div style={{ fontSize:20, marginBottom:6 }}>🔍</div>
+          <div style={{ fontSize:12, color:"#9ca3af", fontWeight:600 }}>
+            Foydalanuvchi topilmadi
+          </div>
+          <div style={{ fontSize:11, color:"#d1d5db", marginTop:3 }}>
+            Email to'liq bo'lishi kerak
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
 // CREATE TEAM MODAL
 // ═══════════════════════════════════════════════════════════════
 const CreateTeamModal = ({ visible, onClose, onCreate }) => {
@@ -264,32 +406,44 @@ const CreateTeamModal = ({ visible, onClose, onCreate }) => {
 // ═══════════════════════════════════════════════════════════════
 const TeamDetailModal = ({ team, visible, onClose }) => {
   const { addMemberByEmail, removeMember, changeRole, leaveTeam, deleteTeam, renameTeam } = useContext(TeamContext);
-  const [tab,       setTab]       = useState("members");
-  const [email,     setEmail]     = useState("");
-  const [addRole,   setAddRole]   = useState("member");
-  const [adding,    setAdding]    = useState(false);
-  const [toast,     setToast]     = useState(null);
-  const [editName,  setEditName]  = useState(team?.name||"");
-  const [editDesc,  setEditDesc]  = useState(team?.description||"");
-  const [saving,    setSaving]    = useState(false);
-  const [pinMsg,    setPinMsg]    = useState(team?.pinnedMsg||"");
+  const [tab,          setTab]          = useState("members");
+  const [emailInput,   setEmailInput]   = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [addRole,      setAddRole]      = useState("member");
+  const [adding,       setAdding]       = useState(false);
+  const [toast,        setToast]        = useState(null);
+  const [editName,     setEditName]     = useState(team?.name||"");
+  const [editDesc,     setEditDesc]     = useState(team?.description||"");
+  const [saving,       setSaving]       = useState(false);
+  const [pinMsg,       setPinMsg]       = useState(team?.pinnedMsg||"");
 
-  const me = team?.members?.find(m=>m.uid===auth.currentUser?.uid);
+  const me      = team?.members?.find(m=>m.uid===auth.currentUser?.uid);
   const isOwner = me?.role === "owner";
   const isAdmin = me?.role === "admin" || isOwner;
 
+  const handlePickUser = (user) => {
+    setSelectedUser(user);
+    setEmailInput(user.email);
+  };
+
+  const handleEmailChange = (val) => {
+    setEmailInput(val);
+    if (selectedUser && selectedUser.email !== val) setSelectedUser(null);
+  };
+
   const showToast = (msg, type="success") => {
-    setToast({msg,type});
-    setTimeout(()=>setToast(null),3000);
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
   const handleAdd = async () => {
-    if (!email.trim()) return;
+    const email = selectedUser?.email || emailInput.trim();
+    if (!email) return;
     setAdding(true);
-    const res = await addMemberByEmail(team.id, email.trim(), addRole);
+    const res = await addMemberByEmail(team.id, email, addRole);
     setAdding(false);
-    showToast(res.msg, res.ok?"success":"error");
-    if (res.ok) setEmail("");
+    showToast(res.msg, res.ok ? "success" : "error");
+    if (res.ok) { setEmailInput(""); setSelectedUser(null); }
   };
 
   const handleSave = async () => {
@@ -338,11 +492,47 @@ const TeamDetailModal = ({ team, visible, onClose }) => {
                 textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>
                 A'zo qo'shish
               </div>
+              {/* Tanlangan foydalanuvchi preview */}
+              {selectedUser && (
+                <div style={{
+                  display:"flex", alignItems:"center", gap:10,
+                  padding:"8px 12px", marginBottom:10,
+                  background:(team.color||"#6366f1")+"0d",
+                  border:`1px solid ${team.color||"#6366f1"}30`,
+                  borderRadius:10,
+                }}>
+                  <div style={{
+                    width:30, height:30, borderRadius:"50%", flexShrink:0,
+                    background: selectedUser.photoURL ? "transparent" : (team.color||"#6366f1")+"25",
+                    border:`2px solid ${team.color||"#6366f1"}30`,
+                    overflow:"hidden",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:11, fontWeight:800, color:team.color||"#6366f1",
+                  }}>
+                    {selectedUser.photoURL
+                      ? <img src={selectedUser.photoURL} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      : (selectedUser.displayName||selectedUser.email||"?").slice(0,2).toUpperCase()
+                    }
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#1a1a1a" }}>
+                      {selectedUser.displayName || selectedUser.email?.split("@")[0]}
+                    </div>
+                    <div style={{ fontSize:10, color:"#9ca3af" }}>{selectedUser.email}</div>
+                  </div>
+                  <button onClick={()=>{ setSelectedUser(null); setEmailInput(""); }}
+                    style={{ border:"none", background:"transparent", cursor:"pointer",
+                      color:"#9ca3af", fontSize:16, padding:"0 4px" }}>✕</button>
+                </div>
+              )}
+
               <div style={{ display:"flex", gap:8 }}>
-                <Input value={email} onChange={e=>setEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  onKeyDown={e=>e.key==="Enter"&&handleAdd()}
-                  style={{ flex:1 }}
+                <UserSearchInput
+                  value={emailInput}
+                  onChange={handleEmailChange}
+                  onSelect={handlePickUser}
+                  excludeEmails={(team.members||[]).map(m=>m.email)}
+                  color={team.color||"#6366f1"}
                 />
                 <select value={addRole} onChange={e=>setAddRole(e.target.value)} style={{
                   padding:"10px 10px", borderRadius:10, border:"1px solid rgba(0,0,0,0.12)",
@@ -353,9 +543,10 @@ const TeamDetailModal = ({ team, visible, onClose }) => {
                     <option key={r} value={r}>{ROLES[r].label}</option>
                   ))}
                 </select>
-                <Btn onClick={handleAdd} disabled={!email.trim()||adding}
+                <Btn onClick={handleAdd}
+                  disabled={(!emailInput.trim() && !selectedUser) || adding}
                   style={{ background:team.color||"#6366f1", color:"#fff", border:"none" }}>
-                  {adding?"…":"+ Qo'sh"}
+                  {adding ? "…" : "+ Qo'sh"}
                 </Btn>
               </div>
             </div>
