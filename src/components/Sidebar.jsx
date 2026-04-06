@@ -46,6 +46,7 @@ const NAV = [
       { to: "/checkers",      icon: CheckersIcon, label: "Shashka"            },
       { to: "/chess",         icon: ChessIcon,    label: "Shaxmat"            },
       { to: "/2048",          icon: TwokIcon,     label: "2048"               },
+      { to: "/word-game",     icon: Ico,         label: "So'z o'yini"        },
     ],
   },
 ];
