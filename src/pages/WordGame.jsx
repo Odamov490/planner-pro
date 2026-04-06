@@ -510,8 +510,8 @@ export default function WordGame() {
         </div>
 
         {/* ── CATEGORY MENU ── */}
-        <div style={{ marginBottom:16 }}></div>
-          <CategoryMenu active={game.activeCat} onChange={changeCategory} scores={scores}/>
+        <div style={{ marginBottom:16 }}>
+          <CategoryMenu active={activeCat} onChange={changeCategory} scores={scores}/>
         </div>
 
         {/* ── ANALYTICS PANEL ── */}
