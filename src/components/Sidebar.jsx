@@ -46,7 +46,7 @@ const NAV = [
       { to: "/checkers",      icon: CheckersIcon, label: "Shashka"            },
       { to: "/chess",         icon: ChessIcon,    label: "Shaxmat"            },
       { to: "/2048",          icon: TwokIcon,     label: "2048"               },
-      { to: "/word-game",     icon: Ico,         label: "So'z o'yini"        },
+      { to: "/word-game",     icon: WordIcon,    label: "So'z o'yini"        },
     ],
   },
 ];
@@ -77,6 +77,7 @@ function SettingsIcon() { return <Ico><circle cx="8" cy="8" r="2.5"/><path d="M8
 function CheckersIcon() { return <Ico><rect x="2" y="2" width="12" height="12" rx="1.5"/><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="10.5" cy="5.5" r="1.5"/><circle cx="5.5" cy="10.5" r="1.5"/><circle cx="10.5" cy="10.5" r="1.5" fill="currentColor" stroke="none"/></Ico>; }
 function ChessIcon()    { return <Ico d="M6 13h4M8 13V9M5 9h6M6.5 9 6 6h4l-.5 3M7 6V4.5A1.5 1.5 0 0 1 8 3a1.5 1.5 0 0 1 1 1.5V6"/>; }
 function TwokIcon()     { return <Ico><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6.5C5 5.7 5.7 5 6.5 5S8 5.7 8 6.5C8 8 5 9 5 10.5h3M11 5v6"/></Ico>; }
+function WordIcon(){return <Ico><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/><text x="4.5" y="6" fontSize="3" textAnchor="middle">A</text><text x="11.5" y="6" fontSize="3" textAnchor="middle">B</text><text x="4.5" y="13" fontSize="3" textAnchor="middle">C</text><text x="11.5" y="13" fontSize="3" textAnchor="middle">D</text></Ico>;}
 function SunIcon()      { return <Ico><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M8 12.5V14M14 8h-1.5M3.5 8H2M12.2 3.8l-1.1 1.1M4.9 11.1 3.8 12.2M12.2 12.2l-1.1-1.1M4.9 4.9 3.8 3.8"/></Ico>; }
 function MoonIcon()     { return <Ico d="M7 3C4.2 3 2 5.2 2 8s2.2 5 5 5c1.8 0 3.4-.9 4.3-2.3C10.9 11 10.5 11 10 11c-2.8 0-5-2.2-5-5 0-1.2.4-2.3 1.1-3.1C5.4 2.9 4.7 3 4 3"/>; }
 function ChevronIcon({ open }) {
