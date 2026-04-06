@@ -858,8 +858,8 @@ export default function Checkers() {
               </p>
               <div style={{ display:"flex", gap:8 }}>
                 {[
-                  { val:"b", label:"⬛ Qora tosh", sub:"Avval yuradi" },
-                  { val:"w", label:"⬜ Oq tosh",   sub:"Ikkinchi yuradi" },
+                  { val:"w", label:"⬜ Oq tosh",   sub:"Avval yuradi" },
+                  { val:"b", label:"⬛ Qora tosh", sub:"Ikkinchi yuradi" },
                 ].map(opt => (
                   <button key={opt.val} onClick={() => setChosenSide(opt.val)} style={{
                     flex:1, padding:"12px 8px", borderRadius:12, cursor:"pointer",
