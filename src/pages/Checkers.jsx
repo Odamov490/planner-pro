@@ -812,65 +812,70 @@ export default function Checkers() {
 
       <div style={{ maxWidth:620, margin:"0 auto", padding:"0 16px 40px" }}>
 
-       {/* ── HEADER ── */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingTop:20,marginBottom:16}}>
+        {/* ── HEADER ── */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:20, marginBottom:16 }}>
           <div>
-            <h1 style={{fontSize:30,fontWeight:900,letterSpacing:"-0.5px",margin:0}}>
-              <span style={{color:"#f59e0b"}}>♟</span>
-              <span style={{marginLeft:8,background:"linear-gradient(90deg,#f59e0b,#f97316)",
-                WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>SHAXMAT</span>
+            <h1 style={{ fontSize:30, fontWeight:900, letterSpacing:"-0.5px", margin:0 }}>
+              <span style={{ color:"#f59e0b" }}>⬤</span>
+              <span style={{
+                marginLeft:8,
+                background:"linear-gradient(90deg,#f59e0b,#f97316)",
+                WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+              }}>SHASHKA</span>
             </h1>
-            <p style={{color:"#475569",fontSize:12,margin:"3px 0 0"}}>
-              Reyting: <span style={{color:"#34d399",fontWeight:700}}>{myRating}</span>
-              {color&&<span style={{color:"#64748b",marginLeft:8}}>
-                · {color==="w"?"⬜ Oq tosh":"⬛ Qora tosh"}
-              </span>}
+            <p style={{ color:"#475569", fontSize:12, margin:"3px 0 0" }}>
+              Reyting: <span style={{ color:"#34d399", fontWeight:700 }}>{myRating}</span>
+              {color && (
+                <span style={{ color:"#64748b", marginLeft:8 }}>
+                  · {color === "b" ? "⬛ Qora tosh" : "⬜ Oq tosh"}
+                </span>
+              )}
             </p>
           </div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setShowSettings(true)} style={{
-              padding:"8px 12px",borderRadius:10,cursor:"pointer",
-              border:"1px solid #1e293b",background:"rgba(15,23,42,0.6)",color:"#94a3b8",fontSize:16,
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={() => setShowSettings(true)} style={{
+              padding:"8px 12px", borderRadius:10, cursor:"pointer",
+              border:"1px solid #1e293b", background:"rgba(15,23,42,0.6)", color:"#94a3b8", fontSize:16,
             }} title="Sozlamalar">⚙️</button>
-            <button onClick={()=>setShowLeaderboard(true)} style={{
-              padding:"8px 14px",borderRadius:10,cursor:"pointer",
-              border:"1px solid rgba(245,158,11,0.3)",background:"rgba(245,158,11,0.08)",
-              color:"#f59e0b",fontSize:13,fontWeight:600,
+            <button onClick={() => setShowLeaderboard(true)} style={{
+              padding:"8px 14px", borderRadius:10, cursor:"pointer",
+              border:"1px solid rgba(245,158,11,0.3)", background:"rgba(245,158,11,0.08)",
+              color:"#f59e0b", fontSize:13, fontWeight:600,
             }}>🏆 Reyting</button>
           </div>
         </div>
 
         {/* ── LOBBY ── */}
-        {!gameId&&(
+        {!gameId && (
           <div style={{
-            background:"rgba(15,23,42,0.7)",border:"1px solid #1e293b",
-            borderRadius:16,padding:20,marginBottom:16,
+            background:"rgba(15,23,42,0.7)", border:"1px solid #1e293b",
+            borderRadius:16, padding:20, marginBottom:16,
           }}>
             {/* Side selection */}
-            <div style={{marginBottom:16}}>
-              <p style={{color:"#94a3b8",fontSize:13,fontWeight:600,marginBottom:8}}>
+            <div style={{ marginBottom:16 }}>
+              <p style={{ color:"#94a3b8", fontSize:13, fontWeight:600, marginBottom:8 }}>
                 ♟ Qaysi tosh rangida o'ynaysiz?
               </p>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{ display:"flex", gap:8 }}>
                 {[
-                  {val:"w",label:"⬜ Oq tosh",sub:"Avval yuradi"},
-                  {val:"b",label:"⬛ Qora tosh",sub:"Ikkinchi yuradi"},
-                ].map(opt=>(
-                  <button key={opt.val} onClick={()=>setChosenSide(opt.val)} style={{
-                    flex:1,padding:"12px 8px",borderRadius:12,cursor:"pointer",
-                    border:`1px solid ${chosenSide===opt.val?"rgba(250,204,21,0.5)":"#1e293b"}`,
-                    background:chosenSide===opt.val?"rgba(250,204,21,0.1)":"rgba(15,23,42,0.5)",
+                  { val:"w", label:"⬜ Oq tosh",   sub:"Avval yuradi" },
+                  { val:"b", label:"⬛ Qora tosh", sub:"Ikkinchi yuradi" },
+                ].map(opt => (
+                  <button key={opt.val} onClick={() => setChosenSide(opt.val)} style={{
+                    flex:1, padding:"12px 8px", borderRadius:12, cursor:"pointer",
+                    border:`1px solid ${chosenSide===opt.val ? "rgba(250,204,21,0.5)" : "#1e293b"}`,
+                    background: chosenSide===opt.val ? "rgba(250,204,21,0.1)" : "rgba(15,23,42,0.5)",
                     transition:"all 0.2s",
                   }}>
-                    <div style={{fontSize:22,marginBottom:4}}>{opt.label.split(" ")[0]}</div>
-                    <div style={{color:chosenSide===opt.val?"#facc15":"#64748b",fontWeight:600,fontSize:13}}>{opt.label.split(" ")[1]+" "+opt.label.split(" ")[2]}</div>
-                    <div style={{color:"#334155",fontSize:11,marginTop:2}}>{opt.sub}</div>
+                    <div style={{ fontSize:24, marginBottom:4 }}>{opt.label.split(" ")[0]}</div>
+                    <div style={{ color: chosenSide===opt.val ? "#facc15" : "#64748b", fontWeight:600, fontSize:13 }}>
+                      {opt.label.split(" ").slice(1).join(" ")}
+                    </div>
+                    <div style={{ color:"#334155", fontSize:11, marginTop:2 }}>{opt.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
-
-
 
             <div style={{ borderTop:"1px solid #1e293b", marginBottom:16 }}/>
 
