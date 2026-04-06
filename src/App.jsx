@@ -16,7 +16,7 @@ import Teams from "./pages/Teams";
 import Checkers from "./pages/Checkers";
 import Chess from "./pages/Chess";
 import Game2048 from "./pages/Game2048"; // 🔥 QO‘SHILDI
-import WordGame from "./WordGame";
+import WordGame from "./pages/WordGame";
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
   const { user } = useContext(AuthContext);
