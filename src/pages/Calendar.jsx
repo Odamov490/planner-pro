@@ -372,7 +372,7 @@ export default function Calendar() {
       fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif",
       color:"#1a1a1a",
     }}>
-      <div style={{ padding:"28px 20px 80px" }}>  
+      <div style={{ padding:"28px 20px 60px" }}>  
 
         {/* ── HEADER ── */}
         <div style={{ marginBottom:24 }}>
