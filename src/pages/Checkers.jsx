@@ -566,7 +566,7 @@ export default function Checkers() {
   const [boardThemeIdx, setBoardThemeIdx] = useState(() => +(localStorage.getItem("sh_board") ?? 0));
   const [pieceStyleId, setPieceStyleId]   = useState(() => localStorage.getItem("sh_piece") || "classic");
   const [boardFlipped, setBoardFlipped]   = useState(() => localStorage.getItem("sh_flip") === "1");
-  const [chosenSide, setChosenSide]       = useState("b"); // before game
+  const [chosenSide, setChosenSide]       = useState("w"); // before game
 
   // ── UI modals ──
   const [showLeaderboard, setShowLeaderboard] = useState(false);
