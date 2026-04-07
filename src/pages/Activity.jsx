@@ -41,7 +41,7 @@ const getMeta = (action) =>
 // ═══════════════════════════════════════════════════════════════
 const card = {
   background: "#fff", border: "1px solid rgba(0,0,0,0.07)",
-  borderRadius: 20, padding: "24px 24px",
+  borderRadius: 20, padding: "24px",
   boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
 };
 const inputSt = {
@@ -68,9 +68,17 @@ const avatarColor = (str) =>
 
 const initials = (name) => (name || "?").split("@")[0].slice(0, 2).toUpperCase();
 
+// serverTimestamp null kelishi mumkin — xavfsiz parse
+const toDate = (ts) => {
+  if (!ts) return null;
+  if (ts.toDate) return ts.toDate();         // Firestore Timestamp
+  if (ts.seconds) return new Date(ts.seconds * 1000); // plain object
+  return new Date(ts);
+};
+
 const relTime = (ts) => {
-  if (!ts) return "";
-  const d    = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = toDate(ts);
+  if (!d) return "";
   const diff = (Date.now() - d) / 1000;
   if (diff < 60)     return "Hozirgina";
   if (diff < 3600)   return `${Math.floor(diff / 60)} daqiqa oldin`;
@@ -80,14 +88,14 @@ const relTime = (ts) => {
 };
 
 const fullTime = (ts) => {
-  if (!ts) return "";
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = toDate(ts);
+  if (!d) return "";
   return d.toLocaleString("uz-UZ", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
 const dateLabel = (ts) => {
-  if (!ts) return "Noma'lum sana";
-  const d   = ts.toDate ? ts.toDate() : new Date(ts);
+  const d = toDate(ts);
+  if (!d) return "Bugun"; // serverTimestamp pending bo'lsa bugun deb hisoblash
   const now = new Date();
   const y   = new Date(now); y.setDate(now.getDate() - 1);
   if (d.toDateString() === now.toDateString()) return "Bugun";
@@ -105,10 +113,7 @@ const StatCard = ({ label, value, color, icon }) => (
     display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 120,
     position: "relative", overflow: "hidden",
   }}>
-    <div style={{
-      position: "absolute", right: -12, top: -12,
-      width: 52, height: 52, borderRadius: "50%", background: color + "12",
-    }} />
+    <div style={{ position: "absolute", right: -12, top: -12, width: 52, height: 52, borderRadius: "50%", background: color + "12" }} />
     <span style={{ fontSize: 22 }}>{icon}</span>
     <span style={{ fontSize: 26, fontWeight: 900, color, lineHeight: 1 }}>{value}</span>
     <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>{label}</span>
@@ -151,29 +156,28 @@ const LogCard = ({ log, isAdmin }) => {
         {meta.icon}
       </div>
 
-      {/* Avatar — faqat admin uchun */}
-      {isAdmin && (
-        <div style={{
-          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-          background: color + "20", border: `2px solid ${color}30`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 11, fontWeight: 800, color, overflow: "hidden",
-        }}>
-          {log.avatar
-            ? <img src={log.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : initials(log.displayName || log.userEmail)
-          }
-        </div>
-      )}
+      {/* User avatar */}
+      <div style={{
+        width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+        background: color + "20", border: `2px solid ${color}30`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 12, fontWeight: 800, color, overflow: "hidden",
+      }}>
+        {log.avatar
+          ? <img src={log.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : initials(log.displayName || log.userEmail)
+        }
+      </div>
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 3 }}>
-          {isAdmin && (
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
-              {log.displayName || log.userEmail?.split("@")[0]}
-            </span>
-          )}
+          {/* Ism — admin uchun boshqa userlar, oddiy user uchun o'zi */}
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
+            {log.displayName || log.userEmail?.split("@")[0] || "Noma'lum"}
+          </span>
+
+          {/* Action badge */}
           <span style={{
             fontSize: 11, fontWeight: 700, color: meta.color,
             background: meta.bg, padding: "2px 9px", borderRadius: 8,
@@ -182,6 +186,8 @@ const LogCard = ({ log, isAdmin }) => {
           }}>
             {meta.icon} {meta.label}
           </span>
+
+          {/* Page badge */}
           {log.page && (
             <span style={{
               fontSize: 10, color: "#9ca3af", background: "#f3f4f6",
@@ -192,6 +198,7 @@ const LogCard = ({ log, isAdmin }) => {
           )}
         </div>
 
+        {/* Detail */}
         {log.detail && (
           <div style={{
             fontSize: 12, color: "#6b7280", fontWeight: 500,
@@ -201,15 +208,16 @@ const LogCard = ({ log, isAdmin }) => {
           </div>
         )}
 
+        {/* Email — faqat admin uchun */}
         {isAdmin && log.userEmail && (
           <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 1 }}>{log.userEmail}</div>
         )}
       </div>
 
       {/* Time */}
-      <div style={{ flexShrink: 0 }} title={fullTime(log.createdAt)}>
+      <div style={{ flexShrink: 0, textAlign: "right" }} title={fullTime(log.createdAt)}>
         <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>
-          {relTime(log.createdAt)}
+          {relTime(log.createdAt) || "Hozirgina"}
         </span>
       </div>
     </div>
@@ -232,7 +240,6 @@ function Activity() {
   // ── Admin tekshiruvi + loglarni yuklash (birlashtirilgan) ──
   useEffect(() => {
     if (!uid) return;
-
     let unsub;
 
     getDoc(doc(db, "users", uid)).then((snap) => {
@@ -247,7 +254,7 @@ function Activity() {
         setLogs(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
         setLoading(false);
       }, (err) => {
-        console.error("Activity logs error:", err);
+        console.error("Activity logs xatosi:", err);
         setLoading(false);
       });
     });
@@ -278,9 +285,8 @@ function Activity() {
 
   // ── Statistika ──
   const todayCount = logs.filter((l) => {
-    if (!l.createdAt) return false;
-    const d = l.createdAt.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
-    return d.toDateString() === new Date().toDateString();
+    const d = toDate(l.createdAt);
+    return d && d.toDateString() === new Date().toDateString();
   }).length;
 
   const uniqueUsers = new Set(logs.map((l) => l.userId)).size;
@@ -310,20 +316,17 @@ function Activity() {
 
         {/* ── STATS ── */}
         <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-          <StatCard label="Jami loglar"   value={logs.length}    icon="📊" color="#6366f1" />
-          <StatCard label="Bugun"         value={todayCount}     icon="📅" color="#22c55e" />
+          <StatCard label="Jami loglar"   value={logs.length}     icon="📊" color="#6366f1" />
+          <StatCard label="Bugun"         value={todayCount}      icon="📅" color="#22c55e" />
           {isAdmin
-            ? <StatCard label="Foydalanuvchilar" value={uniqueUsers}    icon="👥" color="#0ea5e9" />
-            : <StatCard label="Mening loglarim"  value={logs.length}    icon="👤" color="#0ea5e9" />
+            ? <StatCard label="Foydalanuvchilar" value={uniqueUsers}     icon="👥" color="#0ea5e9" />
+            : <StatCard label="Mening loglarim"  value={logs.length}     icon="👤" color="#0ea5e9" />
           }
-          <StatCard label="Filtrlangan"   value={filtered.length} icon="🔍" color="#f59e0b" />
+          <StatCard label="Filtrlangan"   value={filtered.length}  icon="🔍" color="#f59e0b" />
         </div>
 
         {/* ── SEARCH + FILTER ── */}
-        <div style={{
-          ...card, marginBottom: 14, padding: "12px 14px",
-          display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
-        }}>
+        <div style={{ ...card, marginBottom: 14, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
             <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", fontSize: 14 }}>⌕</span>
             <input
