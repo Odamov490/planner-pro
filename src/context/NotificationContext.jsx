@@ -1,78 +1,126 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useEffect, useState } from "react";
+import { db, auth } from "../firebase";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  updateDoc,
+  doc,
+  deleteDoc
+} from "firebase/firestore";
 
-export const NotificationContext = createContext(null);
+export const NotificationContext = createContext();
 
-export const NotificationProvider = ({ children }) => {
+export function NotificationProvider({ children }) {
+
   const [notifications, setNotifications] = useState([]);
 
-  // 🔹 demo data (test uchun)
   useEffect(() => {
-    const demo = [
-      {
-        id: 1,
-        text: "Yangi topshiriq qo‘shildi",
-        read: false,
-        created: { seconds: Math.floor(Date.now() / 1000) },
-      },
-      {
-        id: 2,
-        text: "Hisobot saqlandi",
-        read: true,
-        created: { seconds: Math.floor(Date.now() / 1000) - 5000 },
-      },
-    ];
 
-    setNotifications(demo);
-  }, []);
+    let unsubscribe = null;
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
 
-  const markAsRead = (id) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
+      if (!user) {
+        setNotifications([]);
+        if (unsubscribe) unsubscribe();
+        return;
+      }
 
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
-  };
+      const q = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.uid)
+      );
 
-  const deleteReadNotifications = () => {
-    setNotifications(prev =>
-      prev.filter(n => !n.read)
-    );
-  };
+      if (unsubscribe) unsubscribe();
 
-  const deleteAllNotifications = () => {
-    setNotifications([]);
-  };
+      unsubscribe = onSnapshot(q, (snapshot) => {
 
-  const addNotification = (text) => {
-    const newItem = {
-      id: Date.now(),
-      text,
-      read: false,
-      created: { seconds: Math.floor(Date.now() / 1000) },
+        let data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // 🔥 SORT (ENG YANGI TEPADA)
+        data = data.sort((a, b) => {
+          const aTime = a.created?.seconds || 0;
+          const bTime = b.created?.seconds || 0;
+          return bTime - aTime;
+        });
+
+        console.log("NOTIFICATIONS:", data);
+
+        setNotifications(data);
+      });
+
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribe) unsubscribe();
     };
 
-    setNotifications(prev => [newItem, ...prev]);
+  }, []);
+
+  // 🔥 BITTA O‘QILDI
+  const markAsRead = async (id) => {
+    await updateDoc(doc(db, "notifications", id), {
+      read: true
+    });
   };
 
+  // 🔥 HAMMASINI O‘QILDI
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+
+    for (let n of unread) {
+      await updateDoc(doc(db, "notifications", n.id), {
+        read: true
+      });
+    }
+  };
+
+  // 🗑 FAQAT O‘QILGANLARNI O‘CHIRISH
+  const deleteReadNotifications = async () => {
+    const readOnes = notifications.filter(n => n.read);
+
+    for (let n of readOnes) {
+      await deleteDoc(doc(db, "notifications", n.id));
+    }
+  };
+
+  // 🗑 HAMMASINI O‘CHIRISH
+  const deleteAllNotifications = async () => {
+    for (let n of notifications) {
+      await deleteDoc(doc(db, "notifications", n.id));
+    }
+  };
+
+  // 🔄 REFRESH (UI TRIGGER)
+  const refreshNotifications = () => {
+    setNotifications(prev => [...prev]);
+  };
+
+  // 📊 COUNTLAR (PRO LEVEL)
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const readCount = notifications.filter(n => n.read).length;
+
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        markAsRead,
-        markAllAsRead,
-        deleteReadNotifications,
-        deleteAllNotifications,
-        addNotification,
-      }}
-    >
+    <NotificationContext.Provider value={{
+      notifications,
+      markAsRead,
+      markAllAsRead,
+
+      deleteReadNotifications,   // 🗑
+      deleteAllNotifications,    // 🗑
+
+      refreshNotifications,      // 🔄
+
+      unreadCount,               // 📊
+      readCount                  // 📊
+    }}>
       {children}
     </NotificationContext.Provider>
   );
-};
+}
