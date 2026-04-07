@@ -17,6 +17,7 @@ import Checkers from "./pages/Checkers";
 import Chess from "./pages/Chess";
 import Game2048 from "./pages/Game2048"; // 🔥 QO‘SHILDI
 import WordGame from "./pages/WordGame"; // 🔥 QO‘SHILDI
+import Company from "./pages/Company";
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
   const { user } = useContext(AuthContext);
@@ -41,6 +42,8 @@ function AppRoutes(){
           <Route path="/chess" element={<Chess />} />
           <Route path="/2048" element={<Game2048 />} /> {/* 🔥 QO‘SHILDI */}
           <Route path="/word-game" element={<WordGame />} /> {/* 🔥 QO‘SHILDI */}
+          <Route path="/company" element={<Company />} />
+
         </Routes>
       </div>
     </div>
