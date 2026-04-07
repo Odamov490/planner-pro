@@ -19,6 +19,7 @@ import Game2048 from "./pages/Game2048";
 import WordGame from "./pages/WordGame"; 
 import Company from "./pages/Company";
 import Activity from "./pages/Activity";
+import Settings from "./pages/Settings";
 // 🔐 ROUTE CONTROL
 function AppRoutes(){
   const { user } = useContext(AuthContext);
@@ -45,6 +46,7 @@ function AppRoutes(){
           <Route path="/word-game" element={<WordGame />} /> 
           <Route path="/company" element={<Company />} />
           <Route path="/activity" element={<Activity />} />
+          <Route path="/settings" element={<Settings />} />
 
         </Routes>
       </div>
