@@ -1,146 +1,76 @@
 import { useContext } from "react";
 import { NotificationContext } from "../context/NotificationContext";
 
-export default function Notifications(){
+export default function Notifications() {
+  const context = useContext(NotificationContext);
 
-  const { 
-    notifications, 
-    markAsRead, 
+  if (!context) {
+    return <div className="text-center text-red-500">Context topilmadi</div>;
+  }
+
+  const {
+    notifications,
+    markAsRead,
     markAllAsRead,
     deleteReadNotifications,
     deleteAllNotifications,
-    unreadCount
-  } = useContext(NotificationContext);
+    unreadCount,
+  } = context;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 p-4">
 
       {/* HEADER */}
-      <div className="flex flex-wrap justify-between items-center gap-3">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">🔔 Bildirishnomalar</h1>
 
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            🔔 Bildirishnomalar
-          </h1>
-          <p className="text-sm text-gray-400">
-            Barcha yangilanishlar va topshiriqlar
-          </p>
-        </div>
-
-        {/* ACTIONS */}
-        <div className="flex gap-2 flex-wrap">
-
+        <div className="flex gap-2">
           {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition shadow"
-            >
+            <button onClick={markAllAsRead} className="bg-blue-500 text-white px-3 py-1 rounded">
               Hammasini o‘qildi
             </button>
           )}
 
-          <button
-            onClick={deleteReadNotifications}
-            className="px-4 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200 transition"
-          >
+          <button onClick={deleteReadNotifications} className="bg-yellow-200 px-3 py-1 rounded">
             O‘qilganlarni o‘chirish
           </button>
 
-          <button
-            onClick={deleteAllNotifications}
-            className="px-4 py-2 bg-red-100 text-red-600 text-sm rounded-lg hover:bg-red-200 transition"
-          >
-            Hammasini tozalash
+          <button onClick={deleteAllNotifications} className="bg-red-200 px-3 py-1 rounded">
+            Tozalash
           </button>
-
         </div>
-
-      </div>
-
-      {/* STATS */}
-      <div className="bg-white p-4 rounded-xl shadow flex justify-between items-center">
-
-        <p className="text-sm text-gray-500">
-          Jami: <span className="font-semibold">{notifications.length}</span>
-        </p>
-
-        <p className="text-sm text-gray-500">
-          O‘qilmagan: <span className="font-semibold text-blue-600">{unreadCount}</span>
-        </p>
-
       </div>
 
       {/* EMPTY */}
       {notifications.length === 0 && (
-        <div className="text-center py-16 bg-white rounded-xl shadow">
-          <p className="text-gray-400 text-lg">🔕 Bildirishnoma yo‘q</p>
-          <p className="text-sm text-gray-300 mt-1">
-            Sizga kelgan barcha xabarlar shu yerda chiqadi
-          </p>
-        </div>
+        <div className="text-center text-gray-400">Bildirishnoma yo‘q</div>
       )}
 
       {/* LIST */}
-      <div className="space-y-3">
+      {notifications.map(n => (
+        <div key={n.id} className={`p-4 rounded shadow flex justify-between ${n.read ? "bg-gray-100" : "bg-blue-100"}`}>
 
-        {notifications.map(n => (
-          <div
-            key={n.id}
-            className={`p-4 rounded-xl shadow flex justify-between items-center transition hover:shadow-lg
-
-            ${n.read 
-              ? "bg-gray-50" 
-              : "bg-blue-50 border-l-4 border-blue-500"
-            }`}
-          >
-
-            {/* TEXT */}
-            <div className="flex-1">
-
-              <p className={`text-sm ${!n.read && "font-semibold text-gray-800"}`}>
-                {n.text}
-              </p>
-
-              <p className="text-xs text-gray-400 mt-1">
-                {n.created?.seconds
-                  ? new Date(n.created.seconds * 1000).toLocaleString()
-                  : ""}
-              </p>
-
-            </div>
-
-            {/* ACTION */}
-            <div className="flex items-center gap-2">
-
-              {!n.read && (
-                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                  Yangi
-                </span>
-              )}
-
-              {!n.read && (
-                <button
-                  onClick={()=>markAsRead(n.id)}
-                  className="text-blue-500 text-sm hover:underline"
-                >
-                  O‘qildi
-                </button>
-              )}
-
-            </div>
-
+          <div>
+            <p className={!n.read ? "font-bold" : ""}>{n.text}</p>
+            <p className="text-xs text-gray-500">
+              {new Date(n.created.seconds * 1000).toLocaleString()}
+            </p>
           </div>
-        ))}
 
-      </div>
+          {!n.read && (
+            <button onClick={() => markAsRead(n.id)} className="text-blue-600">
+              O‘qildi
+            </button>
+          )}
+        </div>
+      ))}
 
       {/* FOOTER */}
       {unreadCount > 0 && (
-        <div className="text-center text-xs text-gray-400">
-          Sizda {unreadCount} ta yangi bildirishnoma bor
-        </div>
+        <p className="text-center text-sm text-gray-500">
+          {unreadCount} ta yangi bildirishnoma
+        </p>
       )}
-
     </div>
   );
 }
