@@ -2,7 +2,7 @@ import { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { db } from "../firebase";
 import {
-  collection, query, orderBy, onSnapshot,
+  collection, query, onSnapshot,
   where, doc, getDoc,
 } from "firebase/firestore";
 
@@ -68,17 +68,23 @@ const avatarColor = (str) =>
 
 const initials = (name) => (name || "?").split("@")[0].slice(0, 2).toUpperCase();
 
-// serverTimestamp null kelishi mumkin — xavfsiz parse
 const toDate = (ts) => {
   if (!ts) return null;
-  if (ts.toDate) return ts.toDate();         // Firestore Timestamp
-  if (ts.seconds) return new Date(ts.seconds * 1000); // plain object
+  if (ts.toDate) return ts.toDate();
+  if (ts.seconds) return new Date(ts.seconds * 1000);
   return new Date(ts);
+};
+
+const toSeconds = (ts) => {
+  if (!ts) return 0;
+  if (ts.seconds) return ts.seconds;
+  if (ts.toDate) return ts.toDate().getTime() / 1000;
+  return new Date(ts).getTime() / 1000;
 };
 
 const relTime = (ts) => {
   const d = toDate(ts);
-  if (!d) return "";
+  if (!d) return "Hozirgina";
   const diff = (Date.now() - d) / 1000;
   if (diff < 60)     return "Hozirgina";
   if (diff < 3600)   return `${Math.floor(diff / 60)} daqiqa oldin`;
@@ -95,7 +101,7 @@ const fullTime = (ts) => {
 
 const dateLabel = (ts) => {
   const d = toDate(ts);
-  if (!d) return "Bugun"; // serverTimestamp pending bo'lsa bugun deb hisoblash
+  if (!d) return "Bugun";
   const now = new Date();
   const y   = new Date(now); y.setDate(now.getDate() - 1);
   if (d.toDateString() === now.toDateString()) return "Bugun";
@@ -172,12 +178,9 @@ const LogCard = ({ log, isAdmin }) => {
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 3 }}>
-          {/* Ism — admin uchun boshqa userlar, oddiy user uchun o'zi */}
           <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>
             {log.displayName || log.userEmail?.split("@")[0] || "Noma'lum"}
           </span>
-
-          {/* Action badge */}
           <span style={{
             fontSize: 11, fontWeight: 700, color: meta.color,
             background: meta.bg, padding: "2px 9px", borderRadius: 8,
@@ -186,38 +189,28 @@ const LogCard = ({ log, isAdmin }) => {
           }}>
             {meta.icon} {meta.label}
           </span>
-
-          {/* Page badge */}
           {log.page && (
-            <span style={{
-              fontSize: 10, color: "#9ca3af", background: "#f3f4f6",
-              padding: "2px 7px", borderRadius: 6, fontWeight: 600,
-            }}>
+            <span style={{ fontSize: 10, color: "#9ca3af", background: "#f3f4f6", padding: "2px 7px", borderRadius: 6, fontWeight: 600 }}>
               {log.page}
             </span>
           )}
         </div>
 
-        {/* Detail */}
         {log.detail && (
-          <div style={{
-            fontSize: 12, color: "#6b7280", fontWeight: 500,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
+          <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {log.detail}
           </div>
         )}
 
-        {/* Email — faqat admin uchun */}
         {isAdmin && log.userEmail && (
           <div style={{ fontSize: 10, color: "#d1d5db", marginTop: 1 }}>{log.userEmail}</div>
         )}
       </div>
 
       {/* Time */}
-      <div style={{ flexShrink: 0, textAlign: "right" }} title={fullTime(log.createdAt)}>
+      <div style={{ flexShrink: 0 }} title={fullTime(log.createdAt)}>
         <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>
-          {relTime(log.createdAt) || "Hozirgina"}
+          {relTime(log.createdAt)}
         </span>
       </div>
     </div>
@@ -237,7 +230,8 @@ function Activity() {
   const [search,  setSearch]  = useState("");
   const [filter,  setFilter]  = useState("all");
 
-  // ── Admin tekshiruvi + loglarni yuklash (birlashtirilgan) ──
+  // ── Admin tekshiruvi + loglarni yuklash ──
+  // orderBy YO'Q — index kerak emas, JS da sort qilamiz
   useEffect(() => {
     if (!uid) return;
     let unsub;
@@ -246,12 +240,19 @@ function Activity() {
       const admin = snap.data()?.role === "admin";
       setIsAdmin(admin);
 
+      // Admin — barchaning loglari (filter yo'q)
+      // User  — faqat o'ziniki (where bilan, orderBy yo'q)
       const q = admin
-        ? query(collection(db, "activity_logs"), orderBy("createdAt", "desc"))
-        : query(collection(db, "activity_logs"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+        ? query(collection(db, "activity_logs"))
+        : query(collection(db, "activity_logs"), where("userId", "==", uid));
 
       unsub = onSnapshot(q, (snapshot) => {
-        setLogs(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const data = snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          // JS da yangi → eski tartibida sort
+          .sort((a, b) => toSeconds(b.createdAt) - toSeconds(a.createdAt));
+
+        setLogs(data);
         setLoading(false);
       }, (err) => {
         console.error("Activity logs xatosi:", err);
@@ -284,19 +285,15 @@ function Activity() {
   });
 
   // ── Statistika ──
-  const todayCount = logs.filter((l) => {
+  const todayCount  = logs.filter((l) => {
     const d = toDate(l.createdAt);
     return d && d.toDateString() === new Date().toDateString();
   }).length;
-
   const uniqueUsers = new Set(logs.map((l) => l.userId)).size;
   const usedActions = [...new Set(logs.map((l) => l.action).filter(Boolean))];
 
   return (
-    <div style={{
-      minHeight: "100vh", background: "#f8f7f4",
-      fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif", color: "#1a1a1a",
-    }}>
+    <div style={{ minHeight: "100vh", background: "#f8f7f4", fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif", color: "#1a1a1a" }}>
       <div style={{ padding: "28px 20px 80px" }}>
 
         {/* ── HEADER ── */}
@@ -319,8 +316,8 @@ function Activity() {
           <StatCard label="Jami loglar"   value={logs.length}     icon="📊" color="#6366f1" />
           <StatCard label="Bugun"         value={todayCount}      icon="📅" color="#22c55e" />
           {isAdmin
-            ? <StatCard label="Foydalanuvchilar" value={uniqueUsers}     icon="👥" color="#0ea5e9" />
-            : <StatCard label="Mening loglarim"  value={logs.length}     icon="👤" color="#0ea5e9" />
+            ? <StatCard label="Foydalanuvchilar" value={uniqueUsers}    icon="👥" color="#0ea5e9" />
+            : <StatCard label="Mening loglarim"  value={logs.length}    icon="👤" color="#0ea5e9" />
           }
           <StatCard label="Filtrlangan"   value={filtered.length}  icon="🔍" color="#f59e0b" />
         </div>
@@ -341,15 +338,11 @@ function Activity() {
 
           {usedActions.length > 0 && (
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              <button onClick={() => setFilter("all")} style={pill(filter === "all")}>
-                Barchasi
-              </button>
+              <button onClick={() => setFilter("all")} style={pill(filter === "all")}>Barchasi</button>
               {usedActions.map((action) => {
                 const m = getMeta(action);
                 return (
-                  <button key={action}
-                    onClick={() => setFilter(filter === action ? "all" : action)}
-                    style={pill(filter === action, m.color)}>
+                  <button key={action} onClick={() => setFilter(filter === action ? "all" : action)} style={pill(filter === action, m.color)}>
                     {m.icon} {m.label}
                   </button>
                 );
@@ -358,11 +351,9 @@ function Activity() {
           )}
 
           {search && (
-            <button onClick={() => setSearch("")} style={{
-              padding: "7px 14px", borderRadius: 10, border: "none", cursor: "pointer",
-              fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-              background: "#f3f4f6", color: "#6b7280",
-            }}>✕ Tozalash</button>
+            <button onClick={() => setSearch("")} style={{ padding: "7px 14px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: "#f3f4f6", color: "#6b7280" }}>
+              ✕ Tozalash
+            </button>
           )}
         </div>
 
@@ -379,15 +370,12 @@ function Activity() {
               {search || filter !== "all" ? "Hech narsa topilmadi" : "Faoliyat yo'q"}
             </p>
             <p style={{ fontSize: 13 }}>
-              {search || filter !== "all"
-                ? "Filter yoki qidiruv sozlamalarini o'zgartiring"
-                : "Hali hech qanday harakat amalga oshirilmagan"}
+              {search || filter !== "all" ? "Filter yoki qidiruv sozlamalarini o'zgartiring" : "Hali hech qanday harakat amalga oshirilmagan"}
             </p>
           </div>
         ) : (
           Object.entries(grouped).map(([date, items]) => (
             <div key={date} style={{ marginBottom: 16 }}>
-              {/* Date separator */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   {date === "Bugun" ? "📅 Bugun" : date === "Kecha" ? "📅 Kecha" : `📌 ${date}`}
@@ -397,12 +385,8 @@ function Activity() {
                   {items.length}
                 </span>
               </div>
-
-              {/* Log cards */}
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                {items.map((log) => (
-                  <LogCard key={log.id} log={log} isAdmin={isAdmin} />
-                ))}
+                {items.map((log) => <LogCard key={log.id} log={log} isAdmin={isAdmin} />)}
               </div>
             </div>
           ))
