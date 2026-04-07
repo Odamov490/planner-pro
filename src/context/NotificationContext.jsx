@@ -1,126 +1,82 @@
-import { createContext, useEffect, useState } from "react";
-import { db, auth } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  updateDoc,
-  doc,
-  deleteDoc
-} from "firebase/firestore";
+import { createContext, useState, useEffect } from "react";
 
 export const NotificationContext = createContext();
 
-export function NotificationProvider({ children }) {
-
+export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
 
+  // 🔹 demo uchun boshlang‘ich data
   useEffect(() => {
-
-    let unsubscribe = null;
-
-    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
-
-      if (!user) {
-        setNotifications([]);
-        if (unsubscribe) unsubscribe();
-        return;
-      }
-
-      const q = query(
-        collection(db, "notifications"),
-        where("userId", "==", user.uid)
-      );
-
-      if (unsubscribe) unsubscribe();
-
-      unsubscribe = onSnapshot(q, (snapshot) => {
-
-        let data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // 🔥 SORT (ENG YANGI TEPADA)
-        data = data.sort((a, b) => {
-          const aTime = a.created?.seconds || 0;
-          const bTime = b.created?.seconds || 0;
-          return bTime - aTime;
-        });
-
-        console.log("NOTIFICATIONS:", data);
-
-        setNotifications(data);
-      });
-
-    });
-
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribe) unsubscribe();
-    };
-
+    const demo = [
+      {
+        id: 1,
+        text: "Yangi topshiriq qo‘shildi",
+        read: false,
+        created: { seconds: Date.now() / 1000 },
+      },
+      {
+        id: 2,
+        text: "Hisobot muvaffaqiyatli saqlandi",
+        read: true,
+        created: { seconds: Date.now() / 1000 - 5000 },
+      },
+    ];
+    setNotifications(demo);
   }, []);
 
-  // 🔥 BITTA O‘QILDI
-  const markAsRead = async (id) => {
-    await updateDoc(doc(db, "notifications", id), {
-      read: true
-    });
-  };
-
-  // 🔥 HAMMASINI O‘QILDI
-  const markAllAsRead = async () => {
-    const unread = notifications.filter(n => !n.read);
-
-    for (let n of unread) {
-      await updateDoc(doc(db, "notifications", n.id), {
-        read: true
-      });
-    }
-  };
-
-  // 🗑 FAQAT O‘QILGANLARNI O‘CHIRISH
-  const deleteReadNotifications = async () => {
-    const readOnes = notifications.filter(n => n.read);
-
-    for (let n of readOnes) {
-      await deleteDoc(doc(db, "notifications", n.id));
-    }
-  };
-
-  // 🗑 HAMMASINI O‘CHIRISH
-  const deleteAllNotifications = async () => {
-    for (let n of notifications) {
-      await deleteDoc(doc(db, "notifications", n.id));
-    }
-  };
-
-  // 🔄 REFRESH (UI TRIGGER)
-  const refreshNotifications = () => {
-    setNotifications(prev => [...prev]);
-  };
-
-  // 📊 COUNTLAR (PRO LEVEL)
+  // 🔹 unread count
   const unreadCount = notifications.filter(n => !n.read).length;
-  const readCount = notifications.filter(n => n.read).length;
+
+  // 🔹 bitta o‘qildi qilish
+  const markAsRead = (id) => {
+    setNotifications(prev =>
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
+  };
+
+  // 🔹 hammasini o‘qildi
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n => ({ ...n, read: true }))
+    );
+  };
+
+  // 🔹 faqat o‘qilganlarni o‘chirish
+  const deleteReadNotifications = () => {
+    setNotifications(prev =>
+      prev.filter(n => !n.read)
+    );
+  };
+
+  // 🔹 hammasini o‘chirish
+  const deleteAllNotifications = () => {
+    setNotifications([]);
+  };
+
+  // 🔹 yangi notification qo‘shish (bonus)
+  const addNotification = (text) => {
+    const newItem = {
+      id: Date.now(),
+      text,
+      read: false,
+      created: { seconds: Date.now() / 1000 },
+    };
+    setNotifications(prev => [newItem, ...prev]);
+  };
 
   return (
-    <NotificationContext.Provider value={{
-      notifications,
-      markAsRead,
-      markAllAsRead,
-
-      deleteReadNotifications,   // 🗑в
-      deleteAllNotifications,    // 🗑 
-
-      refreshNotifications,      // 🔄
-
-      unreadCount,               // 📊
-      readCount                  // 📊
-    }}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        markAsRead,
+        markAllAsRead,
+        deleteReadNotifications,
+        deleteAllNotifications,
+        addNotification,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );
-}// 🗑в
+};
