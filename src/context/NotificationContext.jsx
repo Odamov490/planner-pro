@@ -1,11 +1,11 @@
 import { createContext, useState, useEffect } from "react";
 
-export const NotificationContext = createContext();
+export const NotificationContext = createContext(null);
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
 
-  // 🔹 boshlang‘ich data (test uchun)
+  // 🔹 demo data (test uchun)
   useEffect(() => {
     const demo = [
       {
@@ -16,7 +16,7 @@ export const NotificationProvider = ({ children }) => {
       },
       {
         id: 2,
-        text: "Hisobot muvaffaqiyatli saqlandi",
+        text: "Hisobot saqlandi",
         read: true,
         created: { seconds: Math.floor(Date.now() / 1000) - 5000 },
       },
@@ -25,38 +25,30 @@ export const NotificationProvider = ({ children }) => {
     setNotifications(demo);
   }, []);
 
-  // 🔹 unread count
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // 🔹 bitta o‘qildi qilish
   const markAsRead = (id) => {
     setNotifications(prev =>
-      prev.map(n =>
-        n.id === id ? { ...n, read: true } : n
-      )
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
   };
 
-  // 🔹 hammasini o‘qildi
   const markAllAsRead = () => {
     setNotifications(prev =>
       prev.map(n => ({ ...n, read: true }))
     );
   };
 
-  // 🔹 faqat o‘qilganlarni o‘chirish
   const deleteReadNotifications = () => {
     setNotifications(prev =>
       prev.filter(n => !n.read)
     );
   };
 
-  // 🔹 hammasini o‘chirish
   const deleteAllNotifications = () => {
     setNotifications([]);
   };
 
-  // 🔹 yangi notification qo‘shish
   const addNotification = (text) => {
     const newItem = {
       id: Date.now(),
