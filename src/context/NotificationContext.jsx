@@ -112,8 +112,8 @@ export function NotificationProvider({ children }) {
       markAsRead,
       markAllAsRead,
 
-      deleteReadNotifications,   // 🗑
-      deleteAllNotifications,    // 🗑
+      deleteReadNotifications,   // 🗑в
+      deleteAllNotifications,    // 🗑 
 
       refreshNotifications,      // 🔄
 
@@ -123,4 +123,4 @@ export function NotificationProvider({ children }) {
       {children}
     </NotificationContext.Provider>
   );
-}
+}// 🗑в
