@@ -1267,7 +1267,7 @@ function Company() {
         showToast={showToast}
       />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px 60px" }}>
+       <div style={{ padding: "28px 20px 80px" }}>
 
         {/* ── HEADER ── */}
         <div style={{ marginBottom: 24 }}>
