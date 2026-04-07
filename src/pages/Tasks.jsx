@@ -5,6 +5,7 @@ import { notify } from "../utils/notify";
 import { getSuggestion } from "../utils/ai";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../firebase";
+import { logActivity, LOG_ACTIONS } from "../utils/logActivity";
 
 // ═══════════════════════════════════════════════════════════════
 // CONFIG
@@ -410,7 +411,7 @@ export default function Tasks() {
     return () => clearTimeout(t);
   }, [input]);
 
-  // ── ADD ──
+    // ── ADD ──
   const handleAdd = async () => {
     if (!input.trim()) return notify("Vazifa yozing ❗");
     const lines = input.split("\n").map(l => l.trim()).filter(Boolean);
@@ -433,6 +434,11 @@ export default function Tasks() {
         })
       ));
       notify(`✓ ${lines.length} ta vazifa "${selectedTeam.name}" jamoasiga qo'shildi`);
+      await logActivity({
+        action: LOG_ACTIONS.TASK_CREATED,
+        detail: `${lines.length} ta vazifa → "${selectedTeam.name}" jamoasi`,
+        page:   "tasks",
+      });
     } else {
       // Shaxsiy / bitta kishiga
       await Promise.all(lines.map(title =>
@@ -444,6 +450,13 @@ export default function Tasks() {
         })
       ));
       notify(`✓ ${lines.length} ta vazifa qo'shildi`);
+      await logActivity({
+        action: LOG_ACTIONS.TASK_CREATED,
+        detail: lines.length === 1
+          ? lines[0]
+          : `${lines.length} ta vazifa: ${lines.slice(0, 2).join(", ")}${lines.length > 2 ? "…" : ""}`,
+        page: "tasks",
+      });
     }
 
     setInput(""); setSuggestion(""); setNote(""); setTags([]);
@@ -464,9 +477,22 @@ export default function Tasks() {
 
   // ── BULK ──
   const toggleSel  = id => setSelected(prev => { const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
-  const bulkDelete = () => { selected.forEach(id => deleteTask(id)); setSelected(new Set()); setBulkMode(false); };
-  const bulkDone   = () => {
+  const bulkDelete = async () => {
+    selected.forEach(id => deleteTask(id));
+    await logActivity({
+      action: LOG_ACTIONS.TASK_DELETED,
+      detail: `${selected.size} ta vazifa o'chirildi`,
+      page:   "tasks",
+    });
+    setSelected(new Set()); setBulkMode(false);
+  };
+  const bulkDone = async () => {
     selected.forEach(id => { const t=tasks.find(t=>t.id===id); if(t&&!t.completed) toggleTask(id); });
+    await logActivity({
+      action: LOG_ACTIONS.TASK_COMPLETED,
+      detail: `${selected.size} ta vazifa bajarildi`,
+      page:   "tasks",
+    });
     setSelected(new Set()); setBulkMode(false);
   };
 
@@ -501,6 +527,7 @@ export default function Tasks() {
     <div style={{ minHeight:"100vh", background:"#f8f7f4",
       fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif", color:"#1a1a1a" }}>
      <div style={{ padding: "28px 20px 80px" }}>
+
 
         {/* ── HEADER ── */}
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between",
