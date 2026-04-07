@@ -37,7 +37,7 @@ const getMeta = (action) =>
   ACTION_META[action] || { label: action || "Faoliyat", icon: "📌", color: "#6b7280", bg: "rgba(107,114,128,0.08)", border: "rgba(107,114,128,0.3)" };
 
 // ═══════════════════════════════════════════════════════════════
-// STYLE TOKENS — Tasks.jsx dan olingan
+// STYLE TOKENS
 // ═══════════════════════════════════════════════════════════════
 const card = {
   background: "#fff", border: "1px solid rgba(0,0,0,0.07)",
@@ -96,7 +96,7 @@ const dateLabel = (ts) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// STAT CARD — Tasks.jsx dagi StatCard bilan bir xil
+// STAT CARD
 // ═══════════════════════════════════════════════════════════════
 const StatCard = ({ label, value, color, icon }) => (
   <div style={{
@@ -174,7 +174,6 @@ const LogCard = ({ log, isAdmin }) => {
               {log.displayName || log.userEmail?.split("@")[0]}
             </span>
           )}
-          {/* Action badge */}
           <span style={{
             fontSize: 11, fontWeight: 700, color: meta.color,
             background: meta.bg, padding: "2px 9px", borderRadius: 8,
@@ -183,7 +182,6 @@ const LogCard = ({ log, isAdmin }) => {
           }}>
             {meta.icon} {meta.label}
           </span>
-          {/* Page badge */}
           {log.page && (
             <span style={{
               fontSize: 10, color: "#9ca3af", background: "#f3f4f6",
@@ -209,7 +207,7 @@ const LogCard = ({ log, isAdmin }) => {
       </div>
 
       {/* Time */}
-      <div style={{ flexShrink: 0, textAlign: "right" }} title={fullTime(log.createdAt)}>
+      <div style={{ flexShrink: 0 }} title={fullTime(log.createdAt)}>
         <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>
           {relTime(log.createdAt)}
         </span>
@@ -228,33 +226,34 @@ function Activity() {
   const [logs,    setLogs]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [search,  setSearch]  = useState("");
+  const [filter,  setFilter]  = useState("all");
 
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-
-  // ── Admin tekshiruvi ──
+  // ── Admin tekshiruvi + loglarni yuklash (birlashtirilgan) ──
   useEffect(() => {
     if (!uid) return;
+
+    let unsub;
+
     getDoc(doc(db, "users", uid)).then((snap) => {
-      setIsAdmin(snap.data()?.role === "admin");
+      const admin = snap.data()?.role === "admin";
+      setIsAdmin(admin);
+
+      const q = admin
+        ? query(collection(db, "activity_logs"), orderBy("createdAt", "desc"))
+        : query(collection(db, "activity_logs"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+
+      unsub = onSnapshot(q, (snapshot) => {
+        setLogs(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }, (err) => {
+        console.error("Activity logs error:", err);
+        setLoading(false);
+      });
     });
+
+    return () => { if (unsub) unsub(); };
   }, [uid]);
-
-  // ── Loglarni yuklash ──
-  useEffect(() => {
-    if (!uid) return;
-
-    const q = isAdmin
-      ? query(collection(db, "activity_logs"), orderBy("createdAt", "desc"))
-      : query(collection(db, "activity_logs"), where("userId", "==", uid), orderBy("createdAt", "desc"));
-
-    const unsub = onSnapshot(q, (snap) => {
-      setLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
-
-    return () => unsub();
-  }, [uid, isAdmin]);
 
   // ── Filter + search ──
   const filtered = logs.filter((log) => {
@@ -284,8 +283,8 @@ function Activity() {
     return d.toDateString() === new Date().toDateString();
   }).length;
 
-  const uniqueUsers  = new Set(logs.map((l) => l.userId)).size;
-  const usedActions  = [...new Set(logs.map((l) => l.action).filter(Boolean))];
+  const uniqueUsers = new Set(logs.map((l) => l.userId)).size;
+  const usedActions = [...new Set(logs.map((l) => l.action).filter(Boolean))];
 
   return (
     <div style={{
@@ -298,22 +297,26 @@ function Activity() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
           <div>
             <h1 style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.03em", margin: 0 }}>Faoliyat logi</h1>
-            <p style={{ color: "#9ca3af", fontSize: 13, margin: "4px 0 0" }}>
+            <p style={{ color: "#9ca3af", fontSize: 13, margin: "4px 0 0", display: "flex", alignItems: "center", gap: 8 }}>
               {new Date().toLocaleDateString("uz-UZ", { weekday: "short", day: "numeric", month: "short" })}
-              {isAdmin && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, background: "#1a1a1a", color: "#fff", padding: "2px 8px", borderRadius: 6 }}>👑 Admin</span>}
+              {isAdmin && (
+                <span style={{ fontSize: 11, fontWeight: 700, background: "#1a1a1a", color: "#fff", padding: "2px 8px", borderRadius: 6 }}>
+                  👑 Admin
+                </span>
+              )}
             </p>
           </div>
         </div>
 
         {/* ── STATS ── */}
         <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-          <StatCard label="Jami loglar"   value={logs.length}  icon="📊" color="#6366f1" />
-          <StatCard label="Bugun"         value={todayCount}   icon="📅" color="#22c55e" />
+          <StatCard label="Jami loglar"   value={logs.length}    icon="📊" color="#6366f1" />
+          <StatCard label="Bugun"         value={todayCount}     icon="📅" color="#22c55e" />
           {isAdmin
-            ? <StatCard label="Foydalanuvchilar" value={uniqueUsers} icon="👥" color="#0ea5e9" />
-            : <StatCard label="Mening loglarim"  value={logs.length} icon="👤" color="#0ea5e9" />
+            ? <StatCard label="Foydalanuvchilar" value={uniqueUsers}    icon="👥" color="#0ea5e9" />
+            : <StatCard label="Mening loglarim"  value={logs.length}    icon="👤" color="#0ea5e9" />
           }
-          <StatCard label="Filtrlangan" value={filtered.length} icon="🔍" color="#f59e0b" />
+          <StatCard label="Filtrlangan"   value={filtered.length} icon="🔍" color="#f59e0b" />
         </div>
 
         {/* ── SEARCH + FILTER ── */}
@@ -332,20 +335,25 @@ function Activity() {
               onBlur={(e)  => (e.target.style.borderColor = "rgba(0,0,0,0.12)")}
             />
           </div>
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <button onClick={() => setFilter("all")} style={pill(filter === "all")}>
-              Barchasi
-            </button>
-            {usedActions.map((action) => {
-              const m = getMeta(action);
-              return (
-                <button key={action} onClick={() => setFilter(filter === action ? "all" : action)}
-                  style={pill(filter === action, m.color)}>
-                  {m.icon} {m.label}
-                </button>
-              );
-            })}
-          </div>
+
+          {usedActions.length > 0 && (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              <button onClick={() => setFilter("all")} style={pill(filter === "all")}>
+                Barchasi
+              </button>
+              {usedActions.map((action) => {
+                const m = getMeta(action);
+                return (
+                  <button key={action}
+                    onClick={() => setFilter(filter === action ? "all" : action)}
+                    style={pill(filter === action, m.color)}>
+                    {m.icon} {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {search && (
             <button onClick={() => setSearch("")} style={{
               padding: "7px 14px", borderRadius: 10, border: "none", cursor: "pointer",
@@ -368,16 +376,18 @@ function Activity() {
               {search || filter !== "all" ? "Hech narsa topilmadi" : "Faoliyat yo'q"}
             </p>
             <p style={{ fontSize: 13 }}>
-              {search || filter !== "all" ? "Filter yoki qidiruv sozlamalarini o'zgartiring" : "Hali hech qanday harakat amalga oshirilmagan"}
+              {search || filter !== "all"
+                ? "Filter yoki qidiruv sozlamalarini o'zgartiring"
+                : "Hali hech qanday harakat amalga oshirilmagan"}
             </p>
           </div>
         ) : (
           Object.entries(grouped).map(([date, items]) => (
             <div key={date} style={{ marginBottom: 16 }}>
-              {/* Date separator — Tasks.jsx dagi grouped header bilan bir xil */}
+              {/* Date separator */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                  {date === "Bugun" ? "📅 Bugun" : `📌 ${date}`}
+                  {date === "Bugun" ? "📅 Bugun" : date === "Kecha" ? "📅 Kecha" : `📌 ${date}`}
                 </span>
                 <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.06)" }} />
                 <span style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, background: "#f3f4f6", borderRadius: 999, padding: "2px 8px" }}>
