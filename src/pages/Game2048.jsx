@@ -1,118 +1,317 @@
-import { useEffect, useState, useContext, useCallback, useRef } from "react";
+import { useRef, useState, useEffect, useCallback, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { db } from "../firebase";
 import {
-  doc, setDoc, getDoc, updateDoc,
+  doc, setDoc, getDoc,
   collection, query, orderBy, limit, getDocs
 } from "firebase/firestore";
 
 // ═══════════════════════════════════════════════════════════════
-// CONSTANTS
+// DATA — har so'z difficulty: 1=oson, 2=o'rta, 3=qiyin
 // ═══════════════════════════════════════════════════════════════
-const SIZE = 4;
+const CATEGORIES = [
+  { id: "animals", label: "Hayvonlar", icon: "🐾", color: "#7C3AED", light: "#EDE9FE", dark: "#5B21B6" },
+  { id: "food",    label: "Taomlar",   icon: "🍎", color: "#DC2626", light: "#FEF2F2", dark: "#991B1B" },
+  { id: "nature",  label: "Tabiat",    icon: "🌿", color: "#059669", light: "#ECFDF5", dark: "#065F46" },
+  { id: "body",    label: "Tana",      icon: "🫀", color: "#0369A1", light: "#EFF6FF", dark: "#1E3A5F" },
+  { id: "home",    label: "Uy",        icon: "🏠", color: "#B45309", light: "#FFFBEB", dark: "#92400E" },
+  { id: "sport",   label: "Sport",     icon: "⚽", color: "#BE185D", light: "#FDF2F8", dark: "#9D174D" },
+];
 
-const TILE_COLORS = {
-  0:    { bg:"transparent",          text:"transparent",       border:true  },
-  2:    { bg:"#FAEEDA",              text:"#412402"                         },
-  4:    { bg:"#FAC775",              text:"#412402"                         },
-  8:    { bg:"#EF9F27",              text:"#412402"                         },
-  16:   { bg:"#BA7517",              text:"#FAEEDA"                         },
-  32:   { bg:"#F0997B",              text:"#4A1B0C"                         },
-  64:   { bg:"#D85A30",              text:"#FAECE7"                         },
-  128:  { bg:"#993C1D",              text:"#F5C4B3"                         },
-  256:  { bg:"#5DCAA5",              text:"#04342C"                         },
-  512:  { bg:"#1D9E75",              text:"#E1F5EE"                         },
-  1024: { bg:"#0F6E56",              text:"#9FE1CB"                         },
-  2048: { bg:"#085041",              text:"#9FE1CB"                         },
-  4096: { bg:"#7F77DD",              text:"#EEEDFE"                         },
-  8192: { bg:"#534AB7",              text:"#CECBF6"                         },
+const WORD_BANK = {
+  animals: [
+    { word: "IT",           hint: "Sodiq uy hayvoni",             d: 1 },
+    { word: "OT",           hint: "Minib yuriladi",               d: 1 },
+    { word: "FIL",          hint: "Uzun burni bor",               d: 1 },
+    { word: "KIT",          hint: "Eng katta suv hayvoni",        d: 1 },
+    { word: "ARI",          hint: "Asal qiladi",                  d: 1 },
+    { word: "AYIQ",         hint: "O'rmonda yashaydi",            d: 1 },
+    { word: "ILON",         hint: "Sudralib yuradi",              d: 1 },
+    { word: "MOL",          hint: "Yirik uy hayvoni",             d: 1 },
+    { word: "MUSHUK",       hint: "Uy hayvoni, miyovlaydi",       d: 2 },
+    { word: "SIGIR",        hint: "Sut beruvchi hayvon",          d: 2 },
+    { word: "TOVUQ",        hint: "Tuxum qo'yadi",               d: 2 },
+    { word: "QUYON",        hint: "Uzun quloqlari bor",           d: 2 },
+    { word: "BALIQ",        hint: "Suvda yashaydi",               d: 2 },
+    { word: "KUCHUK",       hint: "Itning bolasi",                d: 2 },
+    { word: "TULKI",        hint: "Ayyor, qizil hayvon",          d: 2 },
+    { word: "ESHAK",        hint: "Yuklarni tashiydi",            d: 2 },
+    { word: "SHER",         hint: "Hayvonlar qiroli",             d: 2 },
+    { word: "TUYA",         hint: "Cho'lda yashaydi, o'rkachli",  d: 2 },
+    { word: "DELFIN",       hint: "Aqlli dengiz hayvoni",         d: 2 },
+    { word: "BURGUT",       hint: "Katta yirtqich qush",          d: 2 },
+    { word: "AKULA",        hint: "Dengiz yirtqichi",             d: 2 },
+    { word: "ZEBRA",        hint: "Chiziqli otga o'xshash",       d: 2 },
+    { word: "PANDA",        hint: "Oq-qora ayiq",                 d: 2 },
+    { word: "GEPA",         hint: "Eng tez yuguradigan hayvon",   d: 2 },
+    { word: "KOALA",        hint: "Daraxtda yashaydi",            d: 2 },
+    { word: "KABUTAR",      hint: "Tinchlik ramzi bo'lgan qush",  d: 3 },
+    { word: "KENGURU",      hint: "Sakrash orqali yuradi",        d: 3 },
+    { word: "KALAMUSH",     hint: "Kichik kemiruvchi",            d: 3 },
+    { word: "SICHQON",      hint: "Uyda yashovchi kemiruvchi",    d: 3 },
+    { word: "TIPRATIKAN",   hint: "Ignali hayvon",                d: 3 },
+    { word: "QOPLON",       hint: "Tez yuguruvchi yirtqich",      d: 3 },
+    { word: "LEOPARD",      hint: "Dog'li yirtqich",              d: 3 },
+    { word: "TIMSOH",       hint: "Suvda yashovchi yirtqich",     d: 3 },
+    { word: "QURBAQA",      hint: "Suvda va quruqlikda yashaydi", d: 3 },
+    { word: "KAPALAK",      hint: "Rangli hasharot",              d: 3 },
+    { word: "QISQICHBAQA",  hint: "Yon yuradi",                   d: 3 },
+    { word: "PINGVIN",      hint: "Ucha olmaydi, muzda yashaydi", d: 3 },
+    { word: "CHUMCHUQ",     hint: "Kichik qush",                  d: 3 },
+    { word: "LAYLAK",       hint: "Uzun oyoqli qush",             d: 3 },
+    { word: "MEDUZA",       hint: "Jelga o'xshash dengiz jonzoti",d: 3 },
+  ],
+  food: [
+    { word: "NON",       hint: "Kundalik oziq",               d: 1 },
+    { word: "SUT",       hint: "Oq ichimlik",                 d: 1 },
+    { word: "ASAL",      hint: "Arilar tayyorlaydi",          d: 1 },
+    { word: "OLMA",      hint: "Har kuni bir dona",           d: 1 },
+    { word: "CHOY",      hint: "Issiq ichimlik",              d: 1 },
+    { word: "ANOR",      hint: "Donali meva",                 d: 1 },
+    { word: "UZUM",      hint: "Shirin mayda meva",           d: 1 },
+    { word: "GURUCH",    hint: "Osh uchun kerak",             d: 2 },
+    { word: "SABZI",     hint: "Qizil ildiz sabzavot",        d: 2 },
+    { word: "TUXUM",     hint: "Tovuq qo'yadi",              d: 2 },
+    { word: "PIYOZ",     hint: "Ko'z yoshlatadi",             d: 2 },
+    { word: "QOVUN",     hint: "Yozgi shirin meva",           d: 2 },
+    { word: "LIMON",     hint: "Nordon va sariq",             d: 2 },
+    { word: "BANAN",     hint: "Sariq meva",                  d: 2 },
+    { word: "MANTI",     hint: "Bug'da pishiriladi",          d: 2 },
+    { word: "SOMSA",     hint: "Tandirda pishadi",            d: 2 },
+    { word: "PALOV",     hint: "Mashhur o'zbek taomi",        d: 2 },
+    { word: "PIZZA",     hint: "Italiya taomi",               d: 2 },
+    { word: "BURGER",    hint: "Go'shtli sendvich",           d: 2 },
+    { word: "QATIQ",     hint: "Sut mahsuloti",               d: 2 },
+    { word: "TARVUZ",    hint: "Katta yozgi meva",            d: 2 },
+    { word: "GILOS",     hint: "Qizil kichik meva",           d: 2 },
+    { word: "BODRING",   hint: "Yashil va uzunchoq",          d: 2 },
+    { word: "POMIDOR",   hint: "Qizil sabzavot",              d: 2 },
+    { word: "KARTOSHKA", hint: "Qovurib yeyiladi",            d: 3 },
+    { word: "BAQLAJON",  hint: "To'q binafsha sabzavot",      d: 3 },
+    { word: "QALAMPIR",  hint: "Achchiq yoki shirin bo'ladi", d: 3 },
+    { word: "SARIMSOQ",  hint: "Hidi kuchli",                 d: 3 },
+    { word: "LAGMON",    hint: "Cho'zma ovqat",               d: 3 },
+    { word: "SHASHLIK",  hint: "Go'sht kabobi",               d: 3 },
+    { word: "PISHLOQ",   hint: "Sutdan tayyorlanadi",         d: 3 },
+    { word: "SHOKOLAD",  hint: "Shirinlik",                   d: 3 },
+    { word: "MUZQAYMOQ", hint: "Sovuq shirinlik",             d: 3 },
+    { word: "APELSIN",   hint: "C vitamini ko'p",             d: 3 },
+    { word: "MANDARIN",  hint: "Qishda ko'p yeyiladi",        d: 3 },
+    { word: "QULUPNAY",  hint: "Qizil mayda meva",            d: 3 },
+    { word: "ANANAS",    hint: "Tropik meva",                 d: 3 },
+  ],
+  nature: [
+    { word: "GUL",    hint: "Chiroyli xushboy o'simlik",  d: 1 },
+    { word: "TOG",    hint: "Baland joy, qorli choqqi",   d: 1 },
+    { word: "QOR",    hint: "Qishda yog'adi",             d: 1 },
+    { word: "OY",     hint: "Kecha yoritadi",             d: 1 },
+    { word: "QUM",    hint: "Cho'lda uchraydi",           d: 1 },
+    { word: "YOZ",    hint: "Issiq fasl",                 d: 1 },
+    { word: "KUZ",    hint: "Barglar to'kiladi",          d: 1 },
+    { word: "HAVO",   hint: "Nafas olamiz",               d: 1 },
+    { word: "DARYO",  hint: "Oqar suv",                   d: 2 },
+    { word: "DARAXT", hint: "Yog'och beradi",             d: 2 },
+    { word: "BULUT",  hint: "Osmon paxtalari",            d: 2 },
+    { word: "SHAMOL", hint: "Ko'rinmas, yaproq uchiradi", d: 2 },
+    { word: "DENGIZ", hint: "Katta sho'r suv",            d: 2 },
+    { word: "MAYSA",  hint: "Yashil o'tlar",              d: 2 },
+    { word: "YAPROQ", hint: "Daraxt bargi",               d: 2 },
+    { word: "YASHIN", hint: "Osmon chaqnashi",            d: 2 },
+    { word: "QUYOSH", hint: "Issiqlik manbai",            d: 2 },
+    { word: "YULDUZ", hint: "Osmonda porlaydi",           d: 2 },
+    { word: "BAHOR",  hint: "Gullar ochiladi",            d: 2 },
+    { word: "QISH",   hint: "Eng sovuq fasl",             d: 2 },
+    { word: "OROL",   hint: "Suv bilan o'ralgan yer",     d: 2 },
+    { word: "OLTIN",  hint: "Qimmatbaho metall",          d: 2 },
+    { word: "KUMUSH", hint: "Oq metall",                  d: 2 },
+    { word: "TABIAT", hint: "Atrof-muhit",                d: 2 },
+    { word: "OKEAN",       hint: "Eng katta suv havzasi",      d: 3 },
+    { word: "VODIY",       hint: "Tog'lar orasidagi tekislik", d: 3 },
+    { word: "TUMAN",       hint: "Ko'rinish pasayadi",         d: 3 },
+    { word: "SHARSHARA",   hint: "Suv balanddan tushadi",      d: 3 },
+    { word: "BOTQOQ",      hint: "Nam, loyqa yer",             d: 3 },
+    { word: "MUZLIK",      hint: "Doim muz bilan qoplangan",   d: 3 },
+    { word: "JARLIK",      hint: "Chuqur pastlik",             d: 3 },
+    { word: "QIRGOQ",      hint: "Suv bo'yidagi yer",          d: 3 },
+    { word: "TUPROQ",      hint: "Yer qatlami",                d: 3 },
+    { word: "MOMAQALDIROQ",hint: "Yashin tovushi",             d: 3 },
+    { word: "YOMGIR",      hint: "Suv tomchilari yog'adi",     d: 3 },
+  ],
+  body: [
+    { word: "QOL",    hint: "5 barmoq bor",           d: 1 },
+    { word: "KOZ",    hint: "Ko'rish organi",          d: 1 },
+    { word: "TIL",    hint: "Gapirish, ta'm bilish",   d: 1 },
+    { word: "BEL",    hint: "Orqa past qismi",         d: 1 },
+    { word: "YUZ",    hint: "Boshning old qismi",      d: 1 },
+    { word: "LAB",    hint: "Og'iz cheti",             d: 1 },
+    { word: "SON",    hint: "Oyoq yuqori qismi",       d: 1 },
+    { word: "QON",    hint: "Organizmda aylanadi",     d: 1 },
+    { word: "BOSH",   hint: "Fikrlash organi",         d: 2 },
+    { word: "TISH",   hint: "Ovqat chaynash uchun",    d: 2 },
+    { word: "MIYA",   hint: "Fikrlash markazi",        d: 2 },
+    { word: "SOCH",   hint: "Boshda o'sadi",           d: 2 },
+    { word: "QOSH",   hint: "Ko'z ustida",             d: 2 },
+    { word: "OYOQ",   hint: "Yurish uchun",            d: 2 },
+    { word: "BURUN",  hint: "Hidlash organi",          d: 2 },
+    { word: "QULOQ",  hint: "Eshitish uchun",          d: 2 },
+    { word: "YURAK",  hint: "Qon haydaydi",            d: 2 },
+    { word: "JIGAR",  hint: "Ichki organ",             d: 2 },
+    { word: "TERI",   hint: "Tana qoplami",            d: 2 },
+    { word: "NAFAS",  hint: "Havo olish",              d: 2 },
+    { word: "UYQU",   hint: "Dam olish vaqti",         d: 2 },
+    { word: "KAFT",   hint: "Qo'l ichki qismi",        d: 2 },
+    { word: "TIZZA",  hint: "Oyoq ortasida bukiladi",  d: 2 },
+    { word: "OPKA",   hint: "Nafas olish organi",      d: 3 },
+    { word: "BUYRAK", hint: "Filtrlovchi organ",       d: 3 },
+    { word: "TIRNOQ", hint: "Barmoq uchida",           d: 3 },
+    { word: "BILAK",  hint: "Qo'l o'rta qismi",        d: 3 },
+    { word: "YELKA",  hint: "Qo'l boshlanishi",        d: 3 },
+    { word: "BOLDIR", hint: "Oyoq pastki qismi",       d: 3 },
+    { word: "MUSHAK", hint: "Harakat uchun kerak",     d: 3 },
+    { word: "SUYAK",  hint: "Tana tayanchi",           d: 3 },
+    { word: "UMURTQA",hint: "Orqa suyaklar",           d: 3 },
+    { word: "QORIN",  hint: "Old qism",                d: 3 },
+    { word: "KIPRIK", hint: "Ko'zni himoya qiladi",    d: 3 },
+    { word: "BARMOQ", hint: "Qo'lda 5 ta bor",         d: 3 },
+    { word: "BOYIN",  hint: "Boshni ushlab turadi",    d: 3 },
+    { word: "QUVVAT", hint: "Energiya",                d: 3 },
+  ],
+  home: [
+    { word: "STOL",  hint: "Ustida yoziladi",       d: 1 },
+    { word: "STUL",  hint: "O'tirish uchun",        d: 1 },
+    { word: "SOAT",  hint: "Vaqt ko'rsatadi",       d: 1 },
+    { word: "QULF",  hint: "Yopadi",                d: 1 },
+    { word: "ESHIK", hint: "Ochiladi va yopiladi",  d: 1 },
+    { word: "TOVA",  hint: "Qovurish uchun",        d: 1 },
+    { word: "KOSA",  hint: "Sho'rva ichiladi",      d: 1 },
+    { word: "GILAM",   hint: "Polga solinadi",      d: 2 },
+    { word: "LAMPA",   hint: "Xonani yoritadi",     d: 2 },
+    { word: "KALIT",   hint: "Qulfni ochadi",       d: 2 },
+    { word: "QOZON",   hint: "Ovqat pishiriladi",   d: 2 },
+    { word: "DIVAN",   hint: "Yumshoq o'tirgich",   d: 2 },
+    { word: "SHKAF",   hint: "Kiyim saqlanadi",     d: 2 },
+    { word: "YOSTIQ",  hint: "Bosh qo'yiladi",      d: 2 },
+    { word: "KORPA",   hint: "Yopiniladi",          d: 2 },
+    { word: "PIYOLA",  hint: "Choy ichiladi",       d: 2 },
+    { word: "QOSHIQ",  hint: "Ovqat yeyish uchun",  d: 2 },
+    { word: "PICHOK",  hint: "Kesish uchun",        d: 2 },
+    { word: "CHELAK",  hint: "Suv tashiladi",       d: 2 },
+    { word: "SOVUN",   hint: "Qo'l yuviladi",       d: 2 },
+    { word: "TAROQ",   hint: "Soch taraladi",       d: 2 },
+    { word: "DERAZA",  hint: "Oynali, yorug' kiradi",d: 2 },
+    { word: "KARAVOT", hint: "Uxlash joyi",         d: 2 },
+    { word: "CHAYNIK",     hint: "Suv qaynatadi",            d: 3 },
+    { word: "KASTRYUL",    hint: "Ovqat pishirish idishi",   d: 3 },
+    { word: "SHAMPUN",     hint: "Soch yuviladi",            d: 3 },
+    { word: "SUPURGI",     hint: "Pol supuriladi",           d: 3 },
+    { word: "TELEVIZOR",   hint: "Ko'rsatuvlar chiqadi",     d: 3 },
+    { word: "KOMPYUTER",   hint: "Ishlash uchun texnika",    d: 3 },
+    { word: "NOUTBUK",     hint: "Ko'chma kompyuter",        d: 3 },
+    { word: "MUZLATGICH",  hint: "Ovqatni sovitadi",         d: 3 },
+    { word: "KONDITSIONER",hint: "Sovutadi yoki isitadi",    d: 3 },
+    { word: "VENTILYATOR", hint: "Havo aylantiradi",         d: 3 },
+    { word: "CHANGYUTGICH",hint: "Chang so'radi",            d: 3 },
+    { word: "ROUTER",      hint: "Internet tarqatadi",       d: 3 },
+    { word: "PRINTER",     hint: "Qog'oz chiqaradi",         d: 3 },
+  ],
+  sport: [
+    { word: "TOP",   hint: "Dumaloq, o'yinda ishlatiladi", d: 1 },
+    { word: "GOL",   hint: "Darvozaga kiradi",             d: 1 },
+    { word: "ZAL",   hint: "Sport joyi",                  d: 1 },
+    { word: "BOKS",  hint: "Musht bilan jang",            d: 1 },
+    { word: "YOGA",  hint: "Tinch mashqlar",              d: 1 },
+    { word: "FINAL", hint: "Oxirgi bosqich",              d: 1 },
+    { word: "VAQT",  hint: "O'lchanadi",                  d: 1 },
+    { word: "HAKAM", hint: "O'yinni boshqaradi",          d: 2 },
+    { word: "MEDAL", hint: "Golib mukofoti",              d: 2 },
+    { word: "KURASH",hint: "O'zbekiston milliy sporti",   d: 2 },
+    { word: "FUTBOL",hint: "Eng mashhur sport turi",      d: 2 },
+    { word: "TENNIS",hint: "Raketka bilan o'ynaladi",     d: 2 },
+    { word: "JAMOA", hint: "Bir guruh sportchi",          d: 2 },
+    { word: "GALABA",hint: "Yutish",                      d: 2 },
+    { word: "DURANG",hint: "Teng hisob",                  d: 2 },
+    { word: "ZARBA", hint: "Kuchli urish",                d: 2 },
+    { word: "REKORD",hint: "Eng yaxshi natija",           d: 2 },
+    { word: "TURNIR",hint: "Musobaqa",                    d: 2 },
+    { word: "SUZISH",hint: "Suvda harakat",               d: 2 },
+    { word: "FITNES",hint: "Sog'lomlashtirish sporti",    d: 2 },
+    { word: "SHAXMAT",   hint: "Aqliy o'yin",            d: 2 },
+    { word: "DARVOZA",   hint: "Futbolda bor",           d: 2 },
+    { word: "PENALTI",   hint: "11 metr zarba",          d: 2 },
+    { word: "CHEMPION",  hint: "Birinchi o'rin egasi",   d: 3 },
+    { word: "BASKETBOL", hint: "Halqaga to'p tashlanadi",d: 3 },
+    { word: "VOLEYBOL",  hint: "Tarmoq ustidan o'ynaladi",d:3 },
+    { word: "DZYUDO",    hint: "Yapon jang san'ati",      d: 3 },
+    { word: "KARATE",    hint: "Sharq jang san'ati",      d: 3 },
+    { word: "STADION",   hint: "Katta sport joyi",        d: 3 },
+    { word: "MURABBIY",  hint: "Sportchini o'rgatadi",    d: 3 },
+    { word: "OLIMPIADA", hint: "Eng katta musobaqa",      d: 3 },
+    { word: "RAKETKA",   hint: "Tennis uchun",            d: 3 },
+    { word: "SHTANGA",   hint: "Og'ir ko'tariladi",       d: 3 },
+    { word: "GIMNASTIKA",hint: "Moslashuvchanlik sporti", d: 3 },
+    { word: "SPORTCHI",  hint: "Sport bilan shug'ullanadi",d:3 },
+    { word: "MAGLUBIYAT",hint: "Yutqazish",              d: 3 },
+  ],
 };
 
-const getTileStyle = (val) => TILE_COLORS[val] || { bg:"#3C3489", text:"#CECBF6" };
-
 // ═══════════════════════════════════════════════════════════════
-// GAME LOGIC
+// UTILITIES
 // ═══════════════════════════════════════════════════════════════
-const createEmpty = () => Array(SIZE).fill(null).map(() => Array(SIZE).fill(0));
-
-const addRandom = (grid) => {
-  const g = grid.map(r => [...r]);
-  const empty = [];
-  g.forEach((row, i) => row.forEach((v, j) => { if (!v) empty.push([i, j]); }));
-  if (!empty.length) return g;
-  const [i, j] = empty[Math.floor(Math.random() * empty.length)];
-  g[i][j] = Math.random() < 0.9 ? 2 : 4;
-  return g;
-};
-
-const initGrid = () => {
-  let g = createEmpty();
-  g = addRandom(g);
-  g = addRandom(g);
-  return g;
-};
-
-// Merge one row to the left, returns { row, gained }
-const mergeRow = (row) => {
-  let arr = row.filter(v => v);
-  let gained = 0;
-  for (let i = 0; i < arr.length - 1; i++) {
-    if (arr[i] === arr[i + 1]) {
-      arr[i] *= 2;
-      gained += arr[i];
-      arr.splice(i + 1, 1);
-    }
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  while (arr.length < SIZE) arr.push(0);
-  return { row: arr, gained };
-};
+  return a;
+}
 
-const transpose = g => g[0].map((_, c) => g.map(r => r[c]));
-const reverseRows = g => g.map(r => [...r].reverse());
+function makeLetters(word) {
+  return shuffleArray(word.split("")).map((ch, i) => ({
+    letter: ch,
+    id: `${word}_${i}_${Math.random()}`,
+  }));
+}
 
-const applyMove = (grid, dir) => {
-  let g = grid.map(r => [...r]);
-  let gained = 0;
+function getDifficultyForLevel(level) {
+  if (level <= 2) return [1];
+  if (level <= 4) return [1, 2];
+  if (level <= 6) return [2];
+  return [2, 3];
+}
 
-  if (dir === "right") g = reverseRows(g);
-  if (dir === "up")    g = transpose(g);
-  if (dir === "down")  g = reverseRows(transpose(g));
+function pickWordsForLevel(catId, level, usedWords) {
+  const bank  = WORD_BANK[catId] || [];
+  const diffs = getDifficultyForLevel(level);
+  const count = level <= 2 ? 2 : level <= 4 ? 3 : 4;
+  let pool = shuffleArray(bank.filter(w => diffs.includes(w.d) && !usedWords.has(w.word)));
+  if (pool.length < count) {
+    const fallback = shuffleArray(bank.filter(w => !usedWords.has(w.word) && !pool.find(p => p.word === w.word)));
+    pool.push(...fallback);
+  }
+  return pool.slice(0, count);
+}
 
-  g = g.map(row => { const m = mergeRow(row); gained += m.gained; return m.row; });
-
-  if (dir === "right") g = reverseRows(g);
-  if (dir === "up")    g = transpose(g);
-  if (dir === "down")  g = transpose(reverseRows(g));
-
-  return { grid: g, gained };
-};
-
-const gridsEqual = (a, b) => a.every((row, i) => row.every((v, j) => v === b[i][j]));
-
-const hasWon = (g) => g.some(row => row.some(v => v >= 2048));
-
-const hasLost = (g) => {
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++) {
-      if (!g[r][c]) return false;
-      if (c < SIZE - 1 && g[r][c] === g[r][c + 1]) return false;
-      if (r < SIZE - 1 && g[r][c] === g[r + 1][c]) return false;
-    }
-  return true;
-};
+function buildTargets(catId, level, usedWords) {
+  return pickWordsForLevel(catId, level, usedWords).map(wObj => ({
+    word: wObj.word, hint: wObj.hint, diff: wObj.d,
+    letters: makeLetters(wObj.word),
+    found: false, selected: [], status: "idle",
+  }));
+}
 
 // ═══════════════════════════════════════════════════════════════
-// LEADERBOARD MODAL
+// LEADERBOARD MODAL — 2048 strukturasi
 // ═══════════════════════════════════════════════════════════════
-const Leaderboard = ({ visible, onClose }) => {
-  const [rows, setRows]       = useState([]);
+const Leaderboard = ({ visible, onClose, currentUid }) => {
+  const [rows,    setRows]    = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
     (async () => {
-      const q    = query(collection(db, "2048_users"), orderBy("best", "desc"), limit(10));
+      const q    = query(collection(db, "soz_oyini_users"), orderBy("best", "desc"), limit(10));
       const snap = await getDocs(q);
       setRows(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
@@ -120,147 +319,82 @@ const Leaderboard = ({ visible, onClose }) => {
   }, [visible]);
 
   if (!visible) return null;
-  const medals  = ["🥇","🥈","🥉"];
-  const mColors = ["#f59e0b","#94a3b8","#f97316"];
+
+  const medals  = ["🥇", "🥈", "🥉"];
+  const mColors = ["#f59e0b", "#94a3b8", "#f97316"];
 
   return (
     <div
       onClick={e => e.target === e.currentTarget && onClose()}
       style={{
-        position:"fixed", inset:0, zIndex:200,
-        background:"rgba(0,0,0,0.82)", backdropFilter:"blur(8px)",
-        display:"flex", alignItems:"center", justifyContent:"center", padding:16,
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
       }}
     >
       <div style={{
-        background:"#0d1420", border:"1px solid #1e293b", borderRadius:20,
-        width:"100%", maxWidth:440, boxShadow:"0 24px 80px rgba(0,0,0,0.7)", overflow:"hidden",
+        background: "#fff", borderRadius: "20px 20px 0 0",
+        width: "100%", maxWidth: 480,
+        boxShadow: "0 -8px 48px rgba(0,0,0,0.18)",
+        overflow: "hidden",
+        animation: "slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1)",
       }}>
+        {/* Header */}
         <div style={{
-          display:"flex", justifyContent:"space-between", alignItems:"center",
-          padding:"18px 24px", borderBottom:"1px solid #1e293b",
-          background:"linear-gradient(135deg,#131e35,#0d1420)",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "18px 20px", borderBottom: "1px solid #F4F4F5",
         }}>
-          <span style={{ fontSize:18, fontWeight:700, color:"#f59e0b" }}>🏆 2048 Rekordlar</span>
+          <span style={{ fontSize: 17, fontWeight: 800, color: "#111" }}>🏆 Reyting jadvali</span>
           <button onClick={onClose} style={{
-            width:32, height:32, borderRadius:"50%", border:"none",
-            background:"#1e293b", color:"#94a3b8", cursor:"pointer", fontSize:18,
-            display:"flex", alignItems:"center", justifyContent:"center",
-          }}>×</button>
+            width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #E4E4E7",
+            background: "#F4F4F5", color: "#555", cursor: "pointer", fontSize: 16,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>✕</button>
         </div>
-        <div style={{ padding:16, display:"flex", flexDirection:"column", gap:8, maxHeight:"72vh", overflowY:"auto" }}>
+
+        {/* Body */}
+        <div style={{ padding: 16, maxHeight: "62vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
           {loading && (
-            <div style={{ textAlign:"center", padding:"40px 0", color:"#475569" }}>
-              <div style={{
-                width:28, height:28, border:"2px solid #f59e0b", borderTopColor:"transparent",
-                borderRadius:"50%", animation:"spin 0.8s linear infinite", margin:"0 auto 12px",
-              }}/>
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#A1A1AA" }}>
+              <div style={{ width: 28, height: 28, border: "2px solid #7C3AED", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
               Yuklanmoqda…
             </div>
           )}
-          {!loading && rows.map((r, i) => (
-            <div key={r.id} style={{
-              display:"flex", alignItems:"center", gap:12, padding:"12px 16px", borderRadius:12,
-              border:`1px solid ${i < 3 ? mColors[i]+"30" : "#1e293b"}`,
-              background: i < 3 ? mColors[i]+"0d" : "rgba(15,23,42,0.5)",
-            }}>
-              <span style={{ width:28, textAlign:"center", fontWeight:900, fontSize:16, flexShrink:0, color:i<3?mColors[i]:"#475569" }}>
-                {i < 3 ? medals[i] : i + 1}
-              </span>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ color:"#f1f5f9", fontWeight:600, fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                  {r.displayName || r.email?.split("@")[0] || r.id.slice(0, 10)}
-                </div>
-                {r.email && (
-                  <div style={{ color:"#475569", fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                    {r.email}
-                  </div>
-                )}
-              </div>
-              <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ color:"#34d399", fontWeight:800, fontSize:15 }}>{r.best?.toLocaleString() ?? 0}</div>
-                <div style={{ color:"#475569", fontSize:11 }}>
-                  eng yuqori: <span style={{ color:"#f59e0b" }}>{r.maxTile ?? 2}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+
           {!loading && rows.length === 0 && (
-            <p style={{ textAlign:"center", color:"#475569", padding:"40px 0" }}>Hali rekord yo'q</p>
+            <p style={{ textAlign: "center", color: "#A1A1AA", padding: "40px 0", fontSize: 14 }}>
+              Hali rekord yo'q. O'ynab ko'ring!
+            </p>
           )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
-// ═══════════════════════════════════════════════════════════════
-// SETTINGS MODAL (board theme)
-// ═══════════════════════════════════════════════════════════════
-const BOARD_THEMES = [
-  { name:"Tungi",    boardBg:"#0f172a", cellEmpty:"#1e293b", border:"#334155" },
-  { name:"Kulrang",  boardBg:"#1f2937", cellEmpty:"#374151", border:"#4b5563" },
-  { name:"Ko'k",     boardBg:"#0c1a2e", cellEmpty:"#1e3a5f", border:"#2563eb" },
-  { name:"Yashil",   boardBg:"#052e16", cellEmpty:"#14532d", border:"#166534" },
-  { name:"Qo'ng'ir", boardBg:"#1c0a00", cellEmpty:"#431407", border:"#7c2d12" },
-  { name:"Binafsha", boardBg:"#1e1b4b", cellEmpty:"#312e81", border:"#4338ca" },
-];
-
-const SettingsModal = ({ visible, onClose, themeIdx, setThemeIdx }) => {
-  if (!visible) return null;
-  return (
-    <div
-      onClick={e => e.target === e.currentTarget && onClose()}
-      style={{
-        position:"fixed", inset:0, zIndex:200,
-        background:"rgba(0,0,0,0.82)", backdropFilter:"blur(8px)",
-        display:"flex", alignItems:"center", justifyContent:"center", padding:16,
-      }}
-    >
-      <div style={{
-        background:"#0d1420", border:"1px solid #1e293b", borderRadius:20,
-        width:"100%", maxWidth:380, boxShadow:"0 24px 80px rgba(0,0,0,0.7)", overflow:"hidden",
-      }}>
-        <div style={{
-          display:"flex", justifyContent:"space-between", alignItems:"center",
-          padding:"18px 24px", borderBottom:"1px solid #1e293b",
-          background:"linear-gradient(135deg,#131e35,#0d1420)",
-        }}>
-          <span style={{ fontSize:17, fontWeight:700, color:"#f1f5f9" }}>⚙️ Sozlamalar</span>
-          <button onClick={onClose} style={{
-            width:32, height:32, borderRadius:"50%", border:"none",
-            background:"#1e293b", color:"#94a3b8", cursor:"pointer", fontSize:18,
-            display:"flex", alignItems:"center", justifyContent:"center",
-          }}>×</button>
-        </div>
-        <div style={{ padding:20 }}>
-          <p style={{ color:"#cbd5e1", fontSize:13, fontWeight:600, marginBottom:12 }}>🎨 Taxta uslubi</p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
-            {BOARD_THEMES.map((t, i) => (
-              <button key={i} onClick={() => setThemeIdx(i)} style={{
-                borderRadius:10, overflow:"hidden", cursor:"pointer", border:"none",
-                outline: themeIdx === i ? "2.5px solid #f59e0b" : "2.5px solid transparent",
-                transform: themeIdx === i ? "scale(1.05)" : "scale(1)",
-                transition:"all 0.2s",
-                boxShadow: themeIdx === i ? "0 0 12px rgba(245,158,11,0.3)" : "none",
+          {!loading && rows.map((r, i) => {
+            const isMe = r.id === currentUid;
+            return (
+              <div key={r.id} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 14px", borderRadius: 12,
+                background: isMe ? "#EDE9FE" : i % 2 === 0 ? "#FAFAFA" : "#fff",
+                border: `1.5px solid ${isMe ? "#7C3AED40" : i < 3 ? mColors[i] + "30" : "#F4F4F5"}`,
               }}>
-                <div style={{ background:t.boardBg, padding:8 }}>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:3 }}>
-                    {[0,1,2,3].map(k => (
-                      <div key={k} style={{
-                        height:16, borderRadius:4,
-                        background: k===0 ? "#EF9F27" : k===1 ? "#1D9E75" : k===2 ? "#7F77DD" : t.cellEmpty,
-                        border:`1px solid ${t.border}`,
-                      }}/>
-                    ))}
+                <span style={{ width: 28, textAlign: "center", fontWeight: 900, fontSize: i < 3 ? 22 : 13, flexShrink: 0, color: i < 3 ? mColors[i] : "#A1A1AA" }}>
+                  {i < 3 ? medals[i] : `${i + 1}.`}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: isMe ? "#5B21B6" : "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {r.displayName || r.email?.split("@")[0] || r.id.slice(0, 8)}
+                    {isMe && <span style={{ marginLeft: 6, fontSize: 10, background: "#7C3AED", color: "#fff", borderRadius: 5, padding: "1px 6px" }}>Siz</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#A1A1AA", marginTop: 2 }}>
+                    Level {r.maxLevel ?? 1} · {r.totalGames ?? 1} o'yin
                   </div>
                 </div>
-                <div style={{ background:"#0f172a", color:"#94a3b8", fontSize:11, textAlign:"center", padding:"5px 0" }}>
-                  {t.name}
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: "#7C3AED" }}>{(r.best ?? 0).toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: "#A1A1AA" }}>eng yuqori ball</div>
                 </div>
-              </button>
-            ))}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -268,514 +402,593 @@ const SettingsModal = ({ visible, onClose, themeIdx, setThemeIdx }) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// TILE COMPONENT
+// GAME HOOK
 // ═══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
-// TILE CONFIG
-// ═══════════════════════════════════════════════════════════════
-const TILE_CONFIG = {
-  0:    { bg: "transparent",  text: "transparent",  fs: 0    },
-  2:    { bg: "#FAEEDA",      text: "#412402",       fs: 36   },
-  4:    { bg: "#FAC775",      text: "#412402",       fs: 36   },
-  8:    { bg: "#EF9F27",      text: "#412402",       fs: 36   },
-  16:   { bg: "#BA7517",      text: "#FAEEDA",       fs: 34   },
-  32:   { bg: "#D85A30",      text: "#FAECE7",       fs: 34   },
-  64:   { bg: "#993C1D",      text: "#F5C4B3",       fs: 34   },
-  128:  { bg: "#5DCAA5",      text: "#04342C",       fs: 30   },
-  256:  { bg: "#1D9E75",      text: "#E1F5EE",       fs: 30   },
-  512:  { bg: "#0F6E56",      text: "#9FE1CB",       fs: 30   },
-  1024: { bg: "#085041",      text: "#9FE1CB",       fs: 24   },
-  2048: { bg: "#534AB7",      text: "#CECBF6",       fs: 24   },
-  4096: { bg: "#3C3489",      text: "#EEEDFE",       fs: 22   },
-  8192: { bg: "#26215C",      text: "#CECBF6",       fs: 20   },
-};
-
-const getTileConfig = (val) =>
-  TILE_CONFIG[val] || { bg: "#1a1240", text: "#AFA9EC", fs: 18 };
-
-// ═══════════════════════════════════════════════════════════════
-// TILE COMPONENT
-// ═══════════════════════════════════════════════════════════════
-const Tile = ({ value, isNew, isMerged }) => {
-  if (!value) {
-    return (
-      <div style={{
-        width: "100%", height: "100%",
-        borderRadius: 14,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.07)",
-      }}/>
-    );
-  }
-
-  const { bg, text, fs } = getTileConfig(value);
-  const isHighTile = value >= 2048;
-  const isMega     = value >= 1024;
-
-  const anim = isNew
-    ? "tileAppear 0.22s cubic-bezier(0.34,1.56,0.64,1) both"
-    : isMerged
-    ? "tilePop 0.25s cubic-bezier(0.34,1.56,0.64,1) both"
-    : "none";
-
-  return (
-    <div style={{
-      width: "100%", height: "100%",
-      borderRadius: 14,
-      background: bg,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontWeight: 800,
-      fontSize: fs,
-      lineHeight: 1,
-      letterSpacing: "-0.03em",
-      color: text,
-      animation: anim,
-      position: "relative",
-      overflow: "hidden",
-      transition: "transform 0.15s cubic-bezier(0.34,1.56,0.64,1)",
-    }}>
-
-      {/* Yuqori chap gloss */}
-      <div style={{
-        position: "absolute",
-        top: 8, left: 12,
-        width: "40%", height: "28%",
-        borderRadius: "50%",
-        background: "rgba(255,255,255,0.18)",
-        filter: "blur(3px)",
-        pointerEvents: "none",
-      }}/>
-
-      {/* 1024+ uchun "x2" badge */}
-      {isMerged && isMega && (
-        <div style={{
-          position: "absolute",
-          top: 7, right: 9,
-          fontSize: 9,
-          fontWeight: 700,
-          background: "rgba(255,255,255,0.22)",
-          color: "rgba(255,255,255,0.9)",
-          borderRadius: 6,
-          padding: "1px 5px",
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-        }}>x2</div>
-      )}
-
-      {/* 2048+ uchun toj belgisi */}
-      {isHighTile && (
-        <div style={{
-          position: "absolute",
-          top: 6, left: 9,
-          fontSize: 11,
-          opacity: 0.7,
-          lineHeight: 1,
-        }}>✦</div>
-      )}
-
-      {/* Raqam */}
-      {value.toLocaleString()}
-    </div>
-  );
-};
-// ═══════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════
-export default function Game2048() {
-  const { user } = useContext(AuthContext);
-
-  const [grid, setGrid]         = useState(() => initGrid());
-  const [score, setScore]       = useState(0);
-  const [best, setBest]         = useState(0);
-  const [prevState, setPrev]    = useState(null);   // for undo
-  const [status, setStatus]     = useState("playing"); // "playing" | "won" | "lost"
-  const [continueAfterWin, setContinueAfterWin] = useState(false);
+function useGame(user) {
+  const [catId,     setCatId]     = useState("animals");
+  const [level,     setLevel]     = useState(1);
+  const [targets,   setTargets]   = useState(() => buildTargets("animals", 1, new Set()));
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [score,     setScore]     = useState(0);
+  const [best,      setBest]      = useState(0);
+  const [catScores, setCatScores] = useState({});
+  const [hints,     setHints]     = useState(3);
+  const [hintWord,  setHintWord]  = useState(null);
+  const [lastPts,   setLastPts]   = useState(0);
+  const [showPts,   setShowPts]   = useState(false);
   const [notification, setNotification] = useState(null);
-  const [themeIdx, setThemeIdx] = useState(() => +(localStorage.getItem("2048theme") ?? 0));
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showSettings, setShowSettings]       = useState(false);
-  const [newCells, setNewCells]   = useState(new Set());
-  const [mergedCells, setMergedCells] = useState(new Set());
 
-  // Touch tracking
-  const touchStart = useRef(null);
+  const usedWordsRef = useRef({ animals: new Set(), food: new Set(), nature: new Set(), body: new Set(), home: new Set(), sport: new Set() });
+  const timers = useRef({});
 
-  useEffect(() => { localStorage.setItem("2048theme", themeIdx); }, [themeIdx]);
+  const cat      = CATEGORIES.find(c => c.id === catId);
+  const allFound = targets.length > 0 && targets.every(t => t.found);
 
-  // ── FIREBASE: load save ──
+  // ── Load user best from Firestore ──
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const snap = await getDoc(doc(db, "2048_saves", user.uid));
-      if (snap.exists()) {
-        const d = snap.data();
-        setGrid(d.grid);
-        setScore(d.score ?? 0);
-        setStatus(d.status ?? "playing");
-        setContinueAfterWin(d.continueAfterWin ?? false);
-      }
-      // Load best
-      const uSnap = await getDoc(doc(db, "2048_users", user.uid));
-      if (uSnap.exists()) setBest(uSnap.data().best ?? 0);
+      const snap = await getDoc(doc(db, "soz_oyini_users", user.uid));
+      if (snap.exists()) setBest(snap.data().best ?? 0);
     })();
   }, [user]);
 
-  const save = useCallback(async (g, s, st, caw) => {
+  // ── Update Firestore user record ──
+  const updateUserRecord = useCallback(async (newScore, lv) => {
     if (!user) return;
-    await setDoc(doc(db, "2048_saves", user.uid), {
-      grid: g, score: s, status: st, continueAfterWin: caw ?? false,
-    });
-  }, [user]);
-
-  const updateUserRecord = useCallback(async (newScore, g) => {
-    if (!user) return;
-    const maxTile = Math.max(...g.flat());
-    const ref     = doc(db, "2048_users", user.uid);
-    const snap    = await getDoc(ref);
-    const prev    = snap.exists() ? snap.data() : {};
+    const ref  = doc(db, "soz_oyini_users", user.uid);
+    const snap = await getDoc(ref);
+    const prev = snap.exists() ? snap.data() : {};
     const newBest = Math.max(prev.best ?? 0, newScore);
-    if (newBest > (prev.best ?? 0) || !snap.exists()) {
-      await setDoc(ref, {
-        best: newBest,
-        maxTile: Math.max(prev.maxTile ?? 0, maxTile),
-        email:       user.email || "",
-        displayName: user.displayName || user.email?.split("@")[0] || user.uid.slice(0, 8),
-      }, { merge: true });
-      setBest(newBest);
-    }
+    await setDoc(ref, {
+      best:        newBest,
+      maxLevel:    Math.max(prev.maxLevel ?? 1, lv),
+      totalGames:  (prev.totalGames ?? 0) + 1,
+      email:       user.email || "",
+      displayName: user.displayName || user.email?.split("@")[0] || user.uid.slice(0, 8),
+    }, { merge: true });
+    setBest(newBest);
   }, [user]);
 
-  const showNotif = (msg, ms = 2800) => {
+  const showNotif = (msg, ms = 2500) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), ms);
   };
 
-  // ── MOVE ──
-  const doMove = useCallback((dir) => {
-    setGrid(prev => {
-      if (status === "lost") return prev;
-      if (status === "won" && !continueAfterWin) return prev;
+  const startLevel = useCallback((cid, lv, keepUsed = true) => {
+    if (!keepUsed) usedWordsRef.current[cid] = new Set();
+    const used = usedWordsRef.current[cid] || new Set();
+    const newTargets = buildTargets(cid, lv, used);
+    setCatId(cid); setLevel(lv); setTargets(newTargets);
+    setActiveIdx(0); setHints(3); setHintWord(null); setShowPts(false);
+  }, []);
 
-      const { grid: next, gained } = applyMove(prev, dir);
-      if (gridsEqual(prev, next)) return prev; // nothing moved
+  const changeCategory = id => { startLevel(id, 1, true); setScore(0); };
 
-      // Track new/merged cells for animation
-      const newSet    = new Set();
-      const mergedSet = new Set();
-      next.forEach((row, r) => row.forEach((v, c) => {
-        const idx = r * SIZE + c;
-        if (v && !prev[r][c]) newSet.add(idx);
-        else if (v && v !== prev[r][c] && v === (prev[r][c] ?? 0) * 2) mergedSet.add(idx);
-      }));
-      setNewCells(newSet);
-      setMergedCells(mergedSet);
-      setTimeout(() => { setNewCells(new Set()); setMergedCells(new Set()); }, 250);
-
-      const withTile = addRandom(next);
-      const newScore = (prev => {
-        let s; setScore(cur => { s = cur + gained; return s; }); return s;
-      })();
-
-      setScore(cur => {
-        const ns = cur + gained;
-        updateUserRecord(ns, withTile);
-        return ns;
-      });
-
-      // Check won / lost
-      let newStatus = status;
-      let newCaw    = continueAfterWin;
-      if (!continueAfterWin && hasWon(withTile)) {
-        newStatus = "won";
-        showNotif("🏆 2048! G'alaba!", 4000);
-      } else if (hasLost(withTile)) {
-        newStatus = "lost";
-        showNotif("💀 O'yin tugadi!", 4000);
-      }
-      setStatus(newStatus);
-
-      // Save async
-      setScore(ns => {
-        save(withTile, ns, newStatus, newCaw);
-        return ns;
-      });
-
-      return withTile;
+  const nextLevel = () => {
+    targets.forEach(t => { usedWordsRef.current[catId]?.add(t.word); });
+    const nl = level + 1;
+    setScore(cur => {
+      updateUserRecord(cur, nl);
+      return cur;
     });
-  }, [status, continueAfterWin, save, updateUserRecord]);
+    showNotif(`🎉 Level ${level} yakunlandi!`);
+    startLevel(catId, nl, true);
+  };
 
-  // ── KEYBOARD ──
+  const setActive = i => { if (!targets[i]?.found) setActiveIdx(i); };
+
+  const selectLetter = (wi, lid) => {
+    setTargets(prev => prev.map((t, i) => {
+      if (i !== wi || t.found || t.status === "correct" || t.status === "wrong") return t;
+      const idx = t.selected.findIndex(s => s.id === lid);
+      const selected = idx >= 0
+        ? t.selected.slice(0, idx)
+        : [...t.selected, t.letters.find(l => l.id === lid)].filter(Boolean);
+      return { ...t, selected, status: "idle" };
+    }));
+  };
+
+  const submitWord = wi => {
+    setTargets(prev => {
+      const t = prev[wi];
+      if (!t || t.found) return prev;
+      const typed = t.selected.map(s => s.letter).join("");
+      if (!typed) return prev;
+
+      if (typed === t.word) {
+        const diffBonus = { 1: 10, 2: 15, 3: 20 }[t.diff] || 10;
+        const pts = t.word.length * diffBonus + (t.word.length > 6 ? 30 : 0);
+        setScore(s => {
+          const ns = s + pts;
+          if (ns > best) setBest(ns);
+          return ns;
+        });
+        setCatScores(cs => ({ ...cs, [catId]: (cs[catId] || 0) + pts }));
+        setLastPts(pts); setShowPts(true);
+        const next = prev.findIndex((tt, i) => !tt.found && i !== wi);
+        if (next >= 0) setActiveIdx(next);
+        clearTimeout(timers.current[wi]);
+        timers.current[wi] = setTimeout(() => {
+          setShowPts(false);
+          setTargets(p => p.map((tt, i) => i === wi ? { ...tt, status: "idle" } : tt));
+        }, 900);
+        return prev.map((tt, i) => i === wi ? { ...tt, found: true, selected: [], status: "correct" } : tt);
+      } else {
+        clearTimeout(timers.current[wi]);
+        timers.current[wi] = setTimeout(() => {
+          setTargets(p => p.map((tt, i) => i === wi ? { ...tt, status: "idle", selected: [] } : tt));
+        }, 700);
+        return prev.map((tt, i) => i === wi ? { ...tt, status: "wrong" } : tt);
+      }
+    });
+  };
+
+  const doBack    = wi => setTargets(prev => prev.map((t, i) => i === wi && !t.found ? { ...t, selected: t.selected.slice(0, -1) } : t));
+  const doClear   = wi => setTargets(prev => prev.map((t, i) => i === wi && !t.found ? { ...t, selected: [], status: "idle" } : t));
+  const doShuffle = wi => setTargets(prev => prev.map((t, i) => i === wi && !t.found ? { ...t, letters: shuffleArray([...t.letters]) } : t));
+
+  const useHint = () => {
+    if (hints <= 0) return;
+    const u = targets.find(t => !t.found);
+    if (!u) return;
+    setHintWord(u); setHints(h => h - 1); setActiveIdx(targets.indexOf(u));
+  };
+
+  return {
+    cat, catId, level, targets, activeIdx, score, best, catScores,
+    hints, hintWord, lastPts, showPts, allFound, notification,
+    changeCategory, nextLevel, setActive,
+    selectLetter, submitWord, doBack, doClear, doShuffle, useHint,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SMALL COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+const DiffBadge = ({ diff }) => {
+  const cfg = {
+    1: { label: "Oson",  bg: "#DCFCE7", color: "#166534" },
+    2: { label: "O'rta", bg: "#FEF9C3", color: "#854D0E" },
+    3: { label: "Qiyin", bg: "#FEE2E2", color: "#991B1B" },
+  }[diff] || { label: "", bg: "#F4F4F5", color: "#888" };
+  return (
+    <span style={{ fontSize: 9, fontWeight: 800, background: cfg.bg, color: cfg.color, borderRadius: 5, padding: "1px 5px", flexShrink: 0 }}>
+      {cfg.label}
+    </span>
+  );
+};
+
+const CategoryBar = ({ active, onChange, catScores }) => {
+  const scrollRef  = useRef(null);
+  const [canLeft,  setCanLeft]  = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const check = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 4);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
   useEffect(() => {
-    const map = { ArrowLeft:"left", ArrowRight:"right", ArrowUp:"up", ArrowDown:"down" };
-    const handler = e => {
-      if (map[e.key]) { e.preventDefault(); doMove(map[e.key]); }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [doMove]);
+    check();
+    const el = scrollRef.current;
+    if (el) el.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => { if (el) el.removeEventListener("scroll", check); window.removeEventListener("resize", check); };
+  }, []);
 
-  // ── TOUCH SWIPE ──
-  const onTouchStart = e => { touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
-  const onTouchEnd   = e => {
-    if (!touchStart.current) return;
-    const dx = e.changedTouches[0].clientX - touchStart.current.x;
-    const dy = e.changedTouches[0].clientY - touchStart.current.y;
-    touchStart.current = null;
-    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
-    if (Math.abs(dx) > Math.abs(dy)) doMove(dx > 0 ? "right" : "left");
-    else doMove(dy > 0 ? "down" : "up");
-  };
-
-  // ── NEW GAME ──
-  const newGame = async () => {
-    const g = initGrid();
-    setGrid(g);
-    setScore(0);
-    setStatus("playing");
-    setContinueAfterWin(false);
-    setPrev(null);
-    setNotification(null);
-    await save(g, 0, "playing", false);
-  };
-
-  // ── UNDO ──
-  const undo = () => {
-    if (!prevState) return;
-    setGrid(prevState.grid);
-    setScore(prevState.score);
-    setStatus(prevState.status);
-    setPrev(null);
-  };
-
-  // Save prev before move (wrap doMove)
-  const move = (dir) => {
-    setPrev({ grid: grid.map(r => [...r]), score, status });
-    doMove(dir);
-  };
-
-  // ── CONTINUE after 2048 ──
-  const keepPlaying = () => {
-    setContinueAfterWin(true);
-    setStatus("playing");
-    setNotification(null);
-  };
-
-  const theme = BOARD_THEMES[themeIdx];
-  const maxTile = Math.max(...grid.flat());
+  const scroll = dir => scrollRef.current?.scrollBy({ left: dir * 130, behavior: "smooth" });
 
   return (
-    <div style={{
-      minHeight:"100vh", color:"#f1f5f9",
-      background:"radial-gradient(ellipse at 20% 10%, #0f1d35 0%, #080e1a 55%, #040810 100%)",
-      fontFamily:"'Segoe UI', system-ui, -apple-system, sans-serif",
-    }}>
+    <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}>
+      {canLeft  && <button onClick={() => scroll(-1)} style={arrowBtnStyle}>‹</button>}
+      <div ref={scrollRef} style={{ display: "flex", gap: 6, overflowX: "auto", flex: 1, scrollbarWidth: "none", padding: "2px 0 4px" }}>
+        {CATEGORIES.map(c => {
+          const on  = c.id === active;
+          const pts = catScores[c.id] || 0;
+          return (
+            <button key={c.id} onClick={() => onChange(c.id)} style={{
+              flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
+              padding: "7px 12px", borderRadius: 10,
+              background: on ? c.color : "rgba(0,0,0,0.05)",
+              border: on ? `2px solid ${c.color}` : "2px solid transparent",
+              color: on ? "#fff" : "#555", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", whiteSpace: "nowrap",
+            }}>
+              <span style={{ fontSize: 14 }}>{c.icon}</span>
+              <span>{c.label}</span>
+              {pts > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 800, background: on ? "rgba(255,255,255,0.25)" : c.light, color: on ? "#fff" : c.dark, borderRadius: 6, padding: "1px 5px" }}>{pts}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {canRight && <button onClick={() => scroll(1)} style={arrowBtnStyle}>›</button>}
+    </div>
+  );
+};
 
-      {/* Toast */}
-      {notification && (
+const arrowBtnStyle = {
+  flexShrink: 0, width: 28, height: 28, borderRadius: 8,
+  background: "rgba(0,0,0,0.06)", border: "none",
+  fontSize: 18, fontWeight: 700, cursor: "pointer", color: "#555",
+  display: "flex", alignItems: "center", justifyContent: "center",
+};
+
+const WordRow = ({ target, idx, cat, hintWord, isActive, onSetActive }) => {
+  const isFound  = target.found;
+  const isHinted = hintWord?.word === target.word && !isFound;
+  const cs = target.word.length <= 6 ? 30 : target.word.length <= 9 ? 25 : 21;
+  const fs = target.word.length <= 6 ? 13 : target.word.length <= 9 ? 11 : 9;
+
+  return (
+    <div onClick={() => !isFound && onSetActive(idx)} style={{
+      display: "flex", flexDirection: "column", gap: 5,
+      padding: "8px 10px", borderRadius: 10,
+      background: isActive && !isFound ? `${cat.color}08` : "transparent",
+      border: isActive && !isFound ? `1px solid ${cat.color}30` : "1px solid transparent",
+      cursor: isFound ? "default" : "pointer", transition: "all 0.15s",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ width: 16, fontSize: 11, fontWeight: 700, flexShrink: 0, color: isFound ? cat.color : isActive ? cat.color : "#BBB", textAlign: "right" }}>
+          {idx + 1}.
+        </span>
+        <div style={{ display: "flex", gap: 3 }}>
+          {target.word.split("").map((ch, ci) => {
+            const showFirst = isHinted && ci === 0;
+            return (
+              <div key={ci} style={{
+                width: cs, height: cs + 2, borderRadius: 6, flexShrink: 0,
+                background: isFound ? cat.color : showFirst ? "#FEF3C7" : "#F4F4F5",
+                border: isFound ? `2px solid ${cat.color}` : showFirst ? "2px solid #F59E0B" : "2px dashed #D4D4D8",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: fs, fontWeight: 800,
+                color: isFound ? "#fff" : showFirst ? "#92400E" : "transparent",
+                transition: "all 0.22s cubic-bezier(0.34,1.56,0.64,1)",
+                transform: isFound ? "scale(1.04)" : "scale(1)",
+              }}>
+                {isFound ? ch : showFirst ? target.word[0] : ""}
+              </div>
+            );
+          })}
+        </div>
+        {isFound && <span style={{ fontSize: 14, color: cat.color, flexShrink: 0, marginLeft: "auto" }}>✓</span>}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, paddingLeft: 22, flexWrap: "wrap" }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, flexShrink: 0,
+          color: isFound ? cat.dark : isActive ? cat.dark : "#A1A1AA",
+          background: isFound ? cat.light : isActive ? cat.light : "#F4F4F5",
+          borderRadius: 6, padding: "2px 7px",
+          border: isFound || isActive ? `1px solid ${cat.color}30` : "1px solid transparent",
+          whiteSpace: "nowrap",
+        }}>{target.word.length} harf</span>
+        <DiffBadge diff={target.diff} />
+        {isActive && !isFound && (
+          <span style={{ fontSize: 9, fontWeight: 800, flexShrink: 0, color: cat.color, background: cat.light, borderRadius: 5, padding: "2px 6px", border: `1px solid ${cat.color}30`, whiteSpace: "nowrap" }}>
+            FAOL
+          </span>
+        )}
+        {isHinted && !isFound && (
+          <span title={target.hint} style={{ fontSize: 10, color: "#92400E", fontWeight: 600, background: "#FEF3C7", borderRadius: 6, padding: "2px 8px", border: "1px solid #FDE68A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1 }}>
+            💡 {target.hint}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const LetterCircle = ({ target, wordIdx, cat, onSelect }) => {
+  const { letters, selected, status, found } = target;
+  const [positions, setPositions] = useState({});
+  const count  = letters.length;
+  const CX = 140, CY = 140;
+  const radius = count <= 4 ? 70 : count <= 6 ? 90 : count <= 8 ? 100 : count <= 10 ? 108 : 114;
+
+  useEffect(() => {
+    const pos = {};
+    letters.forEach(({ id }, i) => {
+      const angle = (2 * Math.PI / count) * i - Math.PI / 2;
+      pos[id] = { x: CX + radius * Math.cos(angle), y: CY + radius * Math.sin(angle) };
+    });
+    setPositions(pos);
+  }, [letters, count, radius]);
+
+  const selectedIds = new Set(selected.map(s => s.id));
+  if (found) return null;
+
+  return (
+    <div style={{ position: "relative", width: 280, height: 280, margin: "0 auto" }}>
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+        {selected.map((s, i) => {
+          if (i === 0) return null;
+          const a = positions[selected[i - 1].id];
+          const b = positions[s.id];
+          if (!a || !b) return null;
+          return <line key={`l-${i}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={cat.color} strokeWidth={3} strokeLinecap="round" strokeOpacity={0.6} />;
+        })}
+      </svg>
+      <div style={{ position: "absolute", left: CX - 7, top: CY - 7, width: 14, height: 14, borderRadius: "50%", background: `${cat.color}20`, border: `2px solid ${cat.color}40` }} />
+      {letters.map(({ letter, id }) => {
+        const pos     = positions[id]; if (!pos) return null;
+        const isSel   = selectedIds.has(id);
+        const order   = selected.findIndex(s => s.id === id) + 1;
+        const isWrong = status === "wrong" && isSel;
+        return (
+          <button key={id} onClick={e => { e.stopPropagation(); onSelect(wordIdx, id); }} style={{
+            position: "absolute", left: pos.x - 26, top: pos.y - 26,
+            width: 52, height: 52, borderRadius: "50%",
+            border: isSel ? `2.5px solid ${cat.color}` : "2px solid rgba(0,0,0,0.1)",
+            background: isSel ? cat.color : "#FFFFFF",
+            color: isSel ? "#fff" : "#1A1A1A",
+            fontSize: 17, fontWeight: 800, fontFamily: "'DM Sans', sans-serif",
+            cursor: "pointer", zIndex: 2,
+            boxShadow: isSel ? `0 3px 14px ${cat.color}50` : "0 2px 8px rgba(0,0,0,0.09)",
+            transform: isSel ? "scale(1.12)" : "scale(1)",
+            transition: "all 0.15s cubic-bezier(0.34,1.56,0.64,1)",
+            animation: isWrong ? "shake 0.35s ease" : "none",
+          }}>
+            {letter}
+            {isSel && (
+              <span style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "#111", color: "#fff", fontSize: 9, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>
+                {order}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const WordPreview = ({ target, cat, lastPts, showPts }) => {
+  const { selected, status } = target;
+  const word = selected.map(s => s.letter).join("");
+  const sMap = {
+    correct: { bg: cat.color, border: cat.color, text: "#fff" },
+    wrong:   { bg: "#FEF2F2", border: "#EF4444", text: "#DC2626" },
+    idle:    { bg: "#F4F4F5", border: "#E4E4E7", text: "#1A1A1A" },
+  };
+  const s   = sMap[status] || sMap.idle;
+  const msg = { correct: "✓ To'g'ri!", wrong: "✗ Noto'g'ri" }[status];
+
+  return (
+    <div style={{ minHeight: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+      {word ? (
+        <div style={{ display: "flex", gap: 4, position: "relative", flexWrap: "wrap", justifyContent: "center", animation: status === "wrong" ? "shake 0.35s ease" : status === "correct" ? "popIn 0.3s ease" : "none" }}>
+          {word.split("").map((ch, i) => (
+            <div key={i} style={{ minWidth: 36, height: 42, borderRadius: 9, padding: "0 4px", background: s.bg, border: `2px solid ${s.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: s.text, transition: "all 0.16s" }}>
+              {ch}
+            </div>
+          ))}
+          {showPts && (
+            <div style={{ position: "absolute", top: -20, right: -8, fontSize: 14, fontWeight: 800, color: "#16A34A", animation: "floatUp 1.2s ease forwards", pointerEvents: "none" }}>+{lastPts}</div>
+          )}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: "#A1A1AA", fontWeight: 600, letterSpacing: "0.04em" }}>Harflarni tanlang...</div>
+      )}
+      {msg && <div style={{ fontSize: 12, fontWeight: 700, color: status === "correct" ? cat.dark : s.text, animation: "fadeIn 0.15s ease" }}>{msg}</div>}
+    </div>
+  );
+};
+
+const HintPanel = ({ hints, hintWord, cat, onUseHint }) => (
+  <div style={{ background: "#FAFAFA", borderRadius: 12, border: "1px solid #E4E4E7", padding: "11px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, flex: 1, minWidth: 0 }}>
+      <span style={{ fontSize: 16, marginTop: 1 }}>💡</span>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Yordamchi</div>
+        {hintWord
+          ? <div style={{ fontSize: 12, color: "#D97706", fontWeight: 600, marginTop: 2 }}>{hintWord.hint}</div>
+          : <div style={{ fontSize: 11, color: "#A1A1AA", marginTop: 2 }}>So'z topishda yordam</div>}
+      </div>
+    </div>
+    <button onClick={onUseHint} disabled={hints <= 0} style={{
+      flexShrink: 0, display: "flex", alignItems: "center", gap: 6,
+      padding: "7px 14px", borderRadius: 9,
+      background: hints > 0 ? "#FEF3C7" : "#F4F4F5",
+      border: hints > 0 ? "1.5px solid #FCD34D" : "1.5px solid #E4E4E7",
+      color: hints > 0 ? "#92400E" : "#A1A1AA",
+      fontSize: 13, fontWeight: 700, cursor: hints > 0 ? "pointer" : "default",
+      fontFamily: "'DM Sans', sans-serif", opacity: hints > 0 ? 1 : 0.5, transition: "all 0.15s",
+    }}>
+      {[0, 1, 2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: "50%", display: "inline-block", background: i < hints ? "#F59E0B" : "#D4D4D8" }} />)}
+      <span>Hint</span>
+    </button>
+  </div>
+);
+
+const LevelComplete = ({ cat, targets, score, level, onNext }) => (
+  <div style={{ position: "absolute", inset: 0, zIndex: 40, borderRadius: 20, background: "rgba(255,255,255,0.97)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 32, animation: "popIn 0.35s cubic-bezier(0.34,1.56,0.64,1)" }}>
+    <div style={{ fontSize: 56 }}>🏆</div>
+    <div style={{ fontSize: 22, fontWeight: 800, color: "#111", textAlign: "center", fontFamily: "'DM Sans', sans-serif" }}>Level {level} yakunlandi!</div>
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+      {targets.map(t => <span key={t.word} style={{ padding: "5px 12px", borderRadius: 8, background: cat.light, color: cat.dark, border: `1.5px solid ${cat.color}40`, fontSize: 14, fontWeight: 700 }}>{t.word}</span>)}
+    </div>
+    <div style={{ fontSize: 14, color: "#6B7280" }}>Jami ball: <strong style={{ color: "#111" }}>{score.toLocaleString()}</strong></div>
+    <button onClick={onNext} style={{ padding: "13px 30px", borderRadius: 12, background: cat.color, color: "#fff", border: "none", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+      Keyingi level →
+    </button>
+  </div>
+);
+
+const FoundWords = ({ targets, cat }) => {
+  const found = targets.filter(t => t.found);
+  if (!found.length) return null;
+  return (
+    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid rgba(0,0,0,0.07)", padding: "14px 16px", marginTop: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#A1A1AA", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Topilgan so'zlar — {found.length} ta</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {found.map(t => <div key={t.word} style={{ padding: "5px 12px", borderRadius: 8, background: cat.light, color: cat.dark, border: `1.5px solid ${cat.color}30`, fontSize: 13, fontWeight: 700, animation: "fadeIn 0.2s ease" }}>{t.word}</div>)}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════════
+export default function WordGame() {
+  const { user } = useContext(AuthContext);
+  const g = useGame(user);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  if (!g.cat) return null;
+  const { cat } = g;
+
+  const activeTarget = g.targets[g.activeIdx];
+  const canSubmit    = !!activeTarget && !activeTarget.found && activeTarget.selected.length > 0 && activeTarget.status !== "correct" && activeTarget.status !== "wrong";
+  const foundCount   = g.targets.filter(t => t.found).length;
+  const diffLabel    = { 1: "⭐ Boshlang'ich", 2: "⭐⭐ O'rta", 3: "⭐⭐⭐ Murakkab" };
+  const levelDiff    = getDifficultyForLevel(g.level).at(-1);
+
+  return (
+    <div style={{ minHeight: "100vh", background: `linear-gradient(160deg, ${cat.light} 0%, #FAFAFA 55%, #F8FAFC 100%)`, fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)} }
+        @keyframes popIn { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floatUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-38px)} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-10px) scale(0.95)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+      `}</style>
+
+      {/* ── TOAST ── */}
+      {g.notification && (
         <div style={{
-          position:"fixed", top:24, left:"50%", transform:"translateX(-50%)",
-          zIndex:300, background:"#0f172a", border:"1px solid #1e293b",
-          padding:"11px 24px", borderRadius:999, fontSize:14, fontWeight:500, color:"#f1f5f9",
-          boxShadow:"0 8px 40px rgba(0,0,0,0.6)", animation:"toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-          whiteSpace:"nowrap",
+          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+          zIndex: 300, background: "#111", color: "#fff",
+          padding: "10px 22px", borderRadius: 999, fontSize: 14, fontWeight: 600,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.25)", animation: "toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+          whiteSpace: "nowrap",
         }}>
-          {notification}
+          {g.notification}
         </div>
       )}
 
-      <Leaderboard visible={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
-      <SettingsModal
-        visible={showSettings} onClose={() => setShowSettings(false)}
-        themeIdx={themeIdx} setThemeIdx={setThemeIdx}
-      />
+      <Leaderboard visible={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUid={user?.uid} />
 
-      <div style={{ maxWidth:480, margin:"0 auto", padding:"0 16px 40px" }}>
+      <div style={{ padding: "18px 14px 80px" }}>
 
         {/* ── HEADER ── */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:20, marginBottom:16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div>
-            <h1 style={{ fontSize:38, fontWeight:900, letterSpacing:"-2px", margin:0 }}>
-              <span style={{
-                background:"linear-gradient(90deg,#f59e0b,#ef9f27,#d85a30)",
-                WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-              }}>2048</span>
-            </h1>
-            <p style={{ color:"#475569", fontSize:12, margin:"2px 0 0" }}>
-              Eng yuqori katak: <span style={{ color:"#f59e0b", fontWeight:700 }}>{maxTile.toLocaleString()}</span>
-            </p>
-          </div>
-          <div style={{ display:"flex", gap:8 }}>
-            <button onClick={() => setShowSettings(true)} style={{
-              padding:"8px 12px", borderRadius:10, cursor:"pointer",
-              border:"1px solid #1e293b", background:"rgba(15,23,42,0.6)", color:"#94a3b8", fontSize:16,
-            }}>⚙️</button>
-            <button onClick={() => setShowLeaderboard(true)} style={{
-              padding:"8px 14px", borderRadius:10, cursor:"pointer",
-              border:"1px solid rgba(245,158,11,0.3)", background:"rgba(245,158,11,0.08)",
-              color:"#f59e0b", fontSize:13, fontWeight:600,
-            }}>🏆 Rekordlar</button>
-          </div>
-        </div>
-
-        {/* ── SCORE CARDS ── */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
-          {[
-            { label:"Ball", value:score, color:"#60a5fa" },
-            { label:"Rekord", value:best, color:"#34d399" },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{
-              background:"rgba(15,23,42,0.6)", border:"1px solid #1e293b",
-              borderRadius:12, padding:"12px 16px", textAlign:"center",
-            }}>
-              <div style={{ color:"#475569", fontSize:11, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>
-                {label}
-              </div>
-              <div style={{ color, fontSize:24, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>
-                {value.toLocaleString()}
-              </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#111", letterSpacing: "-0.02em" }}>So'z O'yini</div>
+            <div style={{ fontSize: 12, color: "#A1A1AA", fontWeight: 500, marginTop: 1 }}>
+              {cat.icon} {cat.label} · Level {g.level} · {diffLabel[levelDiff]}
             </div>
-          ))}
-        </div>
-
-        {/* ── CONTROL BUTTONS ── */}
-        <div style={{ display:"flex", gap:8, marginBottom:14 }}>
-          <button onClick={newGame} style={{
-            flex:2, padding:"10px 0", borderRadius:10, cursor:"pointer", border:"none",
-            fontWeight:600, fontSize:14, color:"#fff",
-            background:"linear-gradient(135deg,#2563eb,#1d4ed8)",
-            boxShadow:"0 3px 16px rgba(37,99,235,0.3)",
-          }}>Yangi o'yin</button>
-          <button onClick={undo} disabled={!prevState} style={{
-            flex:1, padding:"10px 0", borderRadius:10, cursor: prevState ? "pointer" : "not-allowed",
-            border:"1px solid #1e293b",
-            background: prevState ? "rgba(15,23,42,0.6)" : "rgba(15,23,42,0.3)",
-            color: prevState ? "#94a3b8" : "#334155",
-            fontWeight:600, fontSize:14,
-          }}>↩ Orqaga</button>
-          {status === "won" && !continueAfterWin && (
-            <button onClick={keepPlaying} style={{
-              flex:2, padding:"10px 0", borderRadius:10, cursor:"pointer", border:"none",
-              fontWeight:600, fontSize:14, color:"#fff",
-              background:"linear-gradient(135deg,#059669,#047857)",
-            }}>Davom etish</button>
-          )}
-        </div>
-
-        {/* ── ARROW BUTTONS (mobile helper) ── */}
-        <div style={{ marginBottom:14, display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-          <button onClick={() => move("up")} style={arrowBtn}>▲</button>
-          <div style={{ display:"flex", gap:6 }}>
-            <button onClick={() => move("left")}  style={arrowBtn}>◀</button>
-            <button onClick={() => move("down")}  style={arrowBtn}>▼</button>
-            <button onClick={() => move("right")} style={arrowBtn}>▶</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            {/* Score cards */}
+            <div style={{ display: "flex", gap: 6 }}>
+              {[
+                { label: "Ball",   value: g.score, color: "#7C3AED", bg: cat.light, bdr: cat.color },
+                { label: "Rekord", value: g.best,  color: "#059669", bg: "#ECFDF5",  bdr: "#059669" },
+              ].map(({ label, value, color, bg, bdr }) => (
+                <div key={label} style={{ background: bg, border: `1px solid ${bdr}30`, borderRadius: 10, padding: "5px 12px", textAlign: "center", minWidth: 64 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color }}>{value.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowLeaderboard(true)} style={{
+              fontSize: 11, fontWeight: 700, color: cat.dark, background: cat.light,
+              border: `1px solid ${cat.color}30`, borderRadius: 7, padding: "3px 10px", cursor: "pointer",
+            }}>
+              🏆 Reyting jadvali
+            </button>
           </div>
         </div>
 
-        {/* ── STATUS MESSAGE ── */}
-        {(status === "won" || status === "lost") && (
-          <div style={{
-            marginBottom:14, padding:"12px 20px", borderRadius:12, textAlign:"center",
-            fontWeight:700, fontSize:17,
-            border:`1px solid ${status==="won" ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
-            background: status==="won" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
-            color: status==="won" ? "#6ee7b7" : "#fca5a5",
-          }}>
-            {status === "won"
-              ? continueAfterWin ? "🏆 Ajoyib! O'yin davom etmoqda" : "🏆 2048! Siz g'alaba qozondingiz!"
-              : "💀 O'yin tugadi! Yangi o'yin boshlang"}
+        {/* ── USER BADGE ── */}
+        {user && (
+          <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: cat.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+              {(user.displayName || user.email || "?")[0].toUpperCase()}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>
+              {user.displayName || user.email?.split("@")[0] || "Foydalanuvchi"}
+            </span>
+            <span style={{ fontSize: 11, color: "#A1A1AA" }}>· Level {g.level}</span>
           </div>
         )}
 
-        {/* ── GAME BOARD ── */}
-        <div
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          style={{
-            background: theme.boardBg,
-            borderRadius: 16,
-            padding: 10,
-            border: `2px solid ${theme.border}`,
-            boxShadow: "0 12px 60px rgba(0,0,0,0.7)",
-            display: "grid",
-            gridTemplateColumns: `repeat(${SIZE}, 1fr)`,
-            gap: 8,
-            touchAction: "none",
-            userSelect: "none",
-          }}
-        >
-          {grid.flat().map((val, idx) => (
-            <div key={idx} style={{ aspectRatio:"1", borderRadius:10, background: val ? "transparent" : theme.cellEmpty, border:`1px solid ${theme.border}` }}>
-              <Tile
-                value={val}
-                isNew={newCells.has(idx)}
-                isMerged={mergedCells.has(idx)}
-              />
-            </div>
-          ))}
+        {/* ── CATEGORY BAR ── */}
+        <div style={{ marginBottom: 14 }}>
+          <CategoryBar active={g.catId} onChange={g.changeCategory} catScores={g.catScores} />
         </div>
 
-        {/* ── HOW TO PLAY ── */}
-        <details style={{
-          background:"rgba(15,23,42,0.4)", border:"1px solid #1e293b",
-          borderRadius:12, overflow:"hidden", marginTop:14,
-        }}>
-          <summary style={{ padding:"12px 16px", cursor:"pointer", color:"#64748b", fontSize:13, userSelect:"none" }}>
-            📖 Qanday o'ynaladi?
-          </summary>
-          <div style={{ padding:"0 16px 16px", color:"#475569", fontSize:13, lineHeight:2 }}>
-            <p>• O'q tugmalari yoki mobilda suring (chapga/o'ngga/yuqoriga/pastga)</p>
-            <p>• Bir xil raqamlar bir-biriga urilganda ikki barobarga oshadi</p>
-            <p>• <b style={{color:"#94a3b8"}}>Maqsad:</b> 2048 katakka yetish</p>
-            <p>• <b style={{color:"#94a3b8"}}>Orqaga:</b> faqat bitta yurish orqaga qaytarish mumkin</p>
-            <p>• Katak to'lib, hech bir harakat imkoni qolmasa — o'yin tugaydi</p>
-            <p>• 2048 ga yetgandan keyin ham davom ettirish mumkin!</p>
+        {/* ── GAME CARD ── */}
+        <div style={{ background: "#fff", borderRadius: 20, border: `1px solid ${cat.color}20`, boxShadow: "0 2px 24px rgba(0,0,0,0.07)", padding: "20px 16px", position: "relative", overflow: "hidden" }}>
+          {g.allFound && <LevelComplete cat={cat} targets={g.targets} score={g.score} level={g.level} onNext={g.nextLevel} />}
+
+          {/* Progress */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <div style={{ flex: 1, height: 5, background: "#F4F4F5", borderRadius: 99, overflow: "hidden" }}>
+              <div style={{ width: `${g.targets.length ? (foundCount / g.targets.length) * 100 : 0}%`, height: "100%", background: cat.color, borderRadius: 99, transition: "width 0.4s ease" }} />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#71717A", whiteSpace: "nowrap" }}>{foundCount} / {g.targets.length}</span>
           </div>
-        </details>
 
+          {/* Word slots */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14, padding: "12px 10px", background: "#FAFAFA", borderRadius: 14, border: "1px solid #F4F4F5" }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#A1A1AA", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+              So'zni bosib tanlang · harflarni to'g'irla
+            </div>
+            {g.targets.map((t, i) => (
+              <WordRow key={`${t.word}-${i}`} target={t} idx={i} cat={cat} hintWord={g.hintWord} isActive={i === g.activeIdx && !t.found} onSetActive={g.setActive} />
+            ))}
+          </div>
+
+          {/* Hint */}
+          <div style={{ marginBottom: 14 }}>
+            <HintPanel hints={g.hints} hintWord={g.hintWord} cat={cat} onUseHint={g.useHint} />
+          </div>
+
+          {/* Preview */}
+          {activeTarget && !activeTarget.found && (
+            <div style={{ marginBottom: 8 }}>
+              <WordPreview target={activeTarget} cat={cat} lastPts={g.lastPts} showPts={g.showPts} />
+            </div>
+          )}
+
+          {/* Letter circle */}
+          {activeTarget && !activeTarget.found && (
+            <LetterCircle target={activeTarget} wordIdx={g.activeIdx} cat={cat} onSelect={g.selectLetter} />
+          )}
+
+          {/* Actions */}
+          {activeTarget && !activeTarget.found && (
+            <>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                {[
+                  { label: "🔀 Aralashtir", onClick: () => g.doShuffle(g.activeIdx), disabled: false, s: { background: "#EFF6FF", border: "1.5px solid #BFDBFE", color: "#1D4ED8" } },
+                  { label: "⌫ O'chir",     onClick: () => g.doBack(g.activeIdx),    disabled: !activeTarget.selected.length, s: { background: "#F4F4F5", border: "1.5px solid #E4E4E7", color: "#374151" } },
+                  { label: "✕ Tozala",     onClick: () => g.doClear(g.activeIdx),   disabled: !activeTarget.selected.length, s: { background: "#FFF1F2", border: "1.5px solid #FECDD3", color: "#BE123C" } },
+                ].map(btn => (
+                  <button key={btn.label} onClick={btn.onClick} disabled={btn.disabled} style={{ flex: 1, padding: "9px 4px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: btn.disabled ? "default" : "pointer", fontFamily: "'DM Sans', sans-serif", opacity: btn.disabled ? 0.4 : 1, transition: "all 0.15s", ...btn.s }}>
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => g.submitWord(g.activeIdx)} disabled={!canSubmit} style={{ width: "100%", marginTop: 10, padding: "13px", borderRadius: 12, border: "none", cursor: canSubmit ? "pointer" : "default", background: canSubmit ? cat.color : "#E4E4E7", color: canSubmit ? "#fff" : "#A1A1AA", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif", transition: "all 0.18s", opacity: canSubmit ? 1 : 0.55 }}>
+                Tekshirish ✓
+              </button>
+            </>
+          )}
+        </div>
+
+        <FoundWords targets={g.targets} cat={cat} />
       </div>
-
-      <style>{`
-        @keyframes toastIn {
-          from { opacity:0; transform:translateX(-50%) translateY(-12px) scale(0.95); }
-          to   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
-        }
-        @keyframes tileAppear {
-          from { transform:scale(0); opacity:0; }
-          to   { transform:scale(1); opacity:1; }
-        }
-        @keyframes tilePop {
-          0%   { transform:scale(1); }
-          50%  { transform:scale(1.2); }
-          100% { transform:scale(1); }
-        }
-        @keyframes spin {
-          to { transform:rotate(360deg); }
-        }
-        details>summary::-webkit-details-marker { display:none; }
-        ::-webkit-scrollbar { width:5px; }
-        ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:10px; }
-        * { box-sizing:border-box; }
-
-
-        @keyframes tileAppear {
-  from { transform: scale(0) rotate(-8deg); opacity: 0; }
-  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
-}
-@keyframes tilePop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.18); }
-  100% { transform: scale(1); }
-}
-      `}</style>
     </div>
   );
 }
-
-const arrowBtn = {
-  width:52, height:44, borderRadius:8, cursor:"pointer",
-  border:"1px solid #1e293b", background:"rgba(15,23,42,0.6)",
-  color:"#94a3b8", fontSize:16, fontWeight:500, display:"flex",
-  alignItems:"center", justifyContent:"center",
-};
