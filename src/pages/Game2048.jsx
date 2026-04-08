@@ -831,7 +831,7 @@ const FoundWords = ({ targets, cat }) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// MAIN
+// MAIN — ism so'ramasdan to'g'ridan-to'g'ri o'yinga kirish
 // ═══════════════════════════════════════════════════════════════
 export default function WordGame() {
   const { user } = useContext(AuthContext);
@@ -840,6 +840,7 @@ export default function WordGame() {
 
   if (!g.cat) return null;
   const { cat } = g;
+
 
   const activeTarget = g.targets[g.activeIdx];
   const canSubmit    = !!activeTarget && !activeTarget.found && activeTarget.selected.length > 0 && activeTarget.status !== "correct" && activeTarget.status !== "wrong";
