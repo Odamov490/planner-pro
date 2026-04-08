@@ -1021,7 +1021,7 @@ export default function WordGame() {
         }
       `}</style>
 
-      <div style={{  padding: "16px 14px 80px" }}>
+      <div style={{ padding: "28px 20px 80px" }}>
 
         {/* ── HEADER ── */}
         <div
