@@ -269,7 +269,7 @@ function Settings() {
     <div style={{ minHeight: "100vh", background: "#f8f7f4", fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif", color: "#1a1a1a" }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 20px 80px" }}>
+      <div style={{  padding: "28px 20px 80px" }}>
 
         {/* ── HEADER ── */}
         <div style={{ marginBottom: 24 }}>
